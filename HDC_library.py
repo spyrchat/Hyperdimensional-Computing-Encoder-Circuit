@@ -65,8 +65,13 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
     container = np.zeros((len(position_table), dim))
     for pixel in range(len(position_table)):
         #Get the input-encoding and XOR-ing result:  
-        xor_result = lookup_generate(dim, len(position_table), 1) != lookup_generate(dim, len(position_table), 0)
+        xor_result = (grayscale_table ^ position_table).astype(int)
+        xor_result = (xor_result != 0).astype(int)
+        xor_result[xor_result == 0] = -1
+        
+        counter = xor_result.sum(axis=0)
 
+        
         hv = # -> INSERT YOUR CODE
         container[pixel, :] = hv*1
         

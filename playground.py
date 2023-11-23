@@ -17,7 +17,10 @@ def lookup_generate(dim, n_keys, mode = 1):
 
     return table.astype(np.int8)
 
-print(lookup_generate(5, 256, 1))
+#print(lookup_generate(5, 256, 1))
 
-xor_result = lookup_generate(5, 256, 1) != lookup_generate(5, 256, 0)
-print(xor_result)
+xor_result = (lookup_generate(5, 256, 1) ^ lookup_generate(5, 256, 0)).astype(int)
+xor_result = (xor_result != 0).astype(int)
+xor_result[xor_result == 0] = -1
+counter = xor_result.sum(axis=0)
+print(counter)
