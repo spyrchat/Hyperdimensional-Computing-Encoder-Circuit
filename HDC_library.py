@@ -40,11 +40,17 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
 # when mode == 1, all the probability of having +1 scales with an input "key" i.e., when the inputs to the HDC encoded are coded
 # on e.g., 8-bit, we have 256 possible keys
 def lookup_generate(dim, n_keys, mode = 1):
+    table = np.empty((0, dim)) 
     if mode == 0:
-        # -> INSERT YOUR CODE
+        for i in range(n_keys - 1):    
+            row =  np.random.choice([-1, 1], size=(dim), p=[0.5, 0.5])
+            table = np.vstack((table, row))
     else:
-        # -> INSERT YOUR CODE
-        
+        for i in range(n_keys - 1):
+            probability = i / (n_keys)
+            row =  np.random.choice([-1, 1], size=(dim), p=[1-probability, probability])
+            table = np.vstack((table, row))
+
     return table.astype(np.int8)
     
 
@@ -59,6 +65,8 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
     container = np.zeros((len(position_table), dim))
     for pixel in range(len(position_table)):
         #Get the input-encoding and XOR-ing result:  
+        xor_result = lookup_generate(dim, len(position_table), 1) != lookup_generate(dim, len(position_table), 0)
+
         hv = # -> INSERT YOUR CODE
         container[pixel, :] = hv*1
         
