@@ -24,4 +24,3 @@ xor_result = (xor_result != 0).astype(int)
 xor_result[xor_result == 0] = -1
 counter = xor_result.sum(axis=0)
 print(counter)
-print("hello")
