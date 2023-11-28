@@ -63,16 +63,16 @@ def lookup_generate(dim, n_keys, mode = 1):
 def encode_HDC_RFF(img, position_table, grayscale_table, dim):
     img_hv = np.zeros(dim, dtype=np.int16)
     container = np.zeros((len(position_table), dim))
-    for pixel in range(len(position_table)):
-        #Get the input-encoding and XOR-ing result:  
-        xor_result = (grayscale_table ^ position_table).astype(int)
+    #Get the input-encoding and XOR-ing result:  
+        xor_result = (grayscale_table[pixel] ^ position_table[pixel])
         xor_result = (xor_result != 0).astype(int)
-        xor_result[xor_result == 0] = -1
         
-        counter = xor_result.sum(axis=0)
+        # ba = math.log(len(position_table), 2)
+        # xor_result[xor_result == 0] = -1
+        # counter = xor_result.sum(axis=0)
+            
 
-        
-        hv = # -> INSERT YOUR CODE
+        hv = xor_result
         container[pixel, :] = hv*1
         
     img_hv = np.sum(container, axis = 0) #bundling without the cyclic step yet
@@ -145,15 +145,21 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
             
         HDC_cont_train_ = HDC_cont_all[:N_train,:] # Take training set
         HDC_cont_train_cpy = HDC_cont_train_ * 1
-        
         # Apply cyclic accumulation with biases and accumulation speed beta_
         
-        # -> INSERT YOUR CODE
+        cyclic_accumulation = HDC_cont_train_cpy % (2 ** B_cnt)
         
         # Ternary thresholding with threshold alpha_sp:
-            
-        # -> INSERT YOUR CODE
-            
+        for i in cyclic_accumulation:
+            cyclic_accumulation[i] =  cyclic_accumulation[i] - (2 ** B_cnt)
+            if cyclic_accumulation[i] > alpha_sp:
+                HDC_cont_train_cpy[i] = 1
+            elif cyclic_accumulation[i] >= - alpha_sp and cyclic_accumulation[i] <= alpha_sp:
+                HDC_cont_train_cpy[i] = 0
+            else:
+                HDC_cont_train_cpy[i] = -1
+
+
 
         Y_train = LABELS[:N_train] - 1
         Y_train = Y_train.astype(int)
@@ -167,11 +173,17 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         
         # Apply cyclic accumulation with biases and accumulation speed beta_
         
-        # -> INSERT YOUR CODE
+        cyclic_accumulation = HDC_cont_test_cpy % (2 ** B_cnt)
         
         # Ternary thresholding with threshold alpha_sp:
-            
-        # -> INSERT YOUR CODE
+        for i in cyclic_accumulation:
+            cyclic_accumulation[i] =  cyclic_accumulation[i] - (2 ** B_cnt)
+            if cyclic_accumulation[i] > alpha_sp:
+                HDC_cont_test_cpy[i] = 1
+            elif cyclic_accumulation[i] >= - alpha_sp and cyclic_accumulation[i] <= alpha_sp:
+                HDC_cont_test_cpy[i] = 0
+            else:
+                HDC_cont_test_cpy[i] = -1
         
         Y_test = LABELS[N_train:] - 1
         Y_test = Y_test.astype(int)
