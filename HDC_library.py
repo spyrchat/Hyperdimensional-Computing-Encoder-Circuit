@@ -13,6 +13,7 @@ ir. Ali Safa, ir. Sergio Massaioli, Prof. Georges Gielen (MICAS-IMEC-KU Leuven)
 
 import numpy as np
 from sklearn.utils import shuffle
+from scipy.linalg import lu_factor, lu_solve
 
 # Receives the HDC encoded test set "HDC_cont_test" and test labels "Y_test"
 # Computes test accuracy w.r.t. the HDC prototypes (centroids) and the biases found at training time
@@ -64,6 +65,7 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
     img_hv = np.zeros(dim, dtype=np.int16)
     container = np.zeros((len(position_table), dim))
     #Get the input-encoding and XOR-ing result:  
+    for pixel in range(len(position_table)):
         xor_result = (grayscale_table[pixel] ^ position_table[pixel])
         xor_result = (xor_result != 0).astype(int)
         
@@ -80,31 +82,46 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
 
 
 # Train the HDC circuit on the training set : (Y_train, HDC_cont_train)
-# n_class: number of clases
+# n_class: number of classes
 # N_train: number of data points in training set
 # gamma: LS-SVM regularization
 # D_b: number of bit for HDC prototype quantization
-def train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train, gamma, D_b):
+def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
     centroids = []
     centroids_q = []
     biases_q = []
     biases = []
+    Y_train = np.array(Y_train_init)
     for cla in range(n_class):
         #The steps below implement the LS-SVM training, check out the course notes, we are just implementing that
         #Beta.alpha = L -> alpha (that we want) 
-        Beta = np.zeros((N_train+1, N_train+1)) #LS-SVM regression matrix
+        Beta = np.zeros(N_train+1, N_train+1) #LS-SVM regression matrix
+        omega = np.zeros(N_train, N_train)
         #Fill Beta:
         
-        # -> INSERT YOUR CODE
+        for i in range(N_train):
+            for j in range(N_train):
+                omega[i][j] = Y_train[i]*Y_train[j]*(np.transpose(HDC_cont_train))[i]*HDC_cont_train[j]
+        Beta[1:N_train+1,0] = Y_train
+        Beta[0,1:N_train+1] = np.transpose(Y_train)
+        Beta[1:N_train+1,1:N_train+1] = omega + pow(gamma,-1) * np.identity(N_train)
+
+
         
         #Target vector L:
             
-        # -> INSERT YOUR CODE
+        L = np.zeros(N_train+1)
+        L[1:N_train+1] = np.ones(N_train)
         
         #Solve the system of equations to get the vector alpha:
             
-        alpha = # -> INSERT YOUR CODE
+        v = np.zeros(N_train+1)
+        lu, piv = lu_factor(Beta)
+        v = lu_solve((lu,piv),L)
+        alpha = v[1:N_train+1]
+        b = v[0]
         
+
         # Get HDC prototype for class cla, still in floating point
         
         final_HDC_centroid = # -> INSERT YOUR CODE
