@@ -99,9 +99,11 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         omega = np.zeros(N_train, N_train)
         #Fill Beta:
         
+            
         for i in range(N_train):
             for j in range(N_train):
-                omega[i][j] = Y_train[i]*Y_train[j]*(np.transpose(HDC_cont_train))[i]*HDC_cont_train[j]
+                omega[i, j] = Y_train[i] * Y_train[j] * HDC_cont_train[i] * HDC_cont_train[j]
+        
         Beta[1:N_train+1,0] = Y_train
         Beta[0,1:N_train+1] = np.transpose(Y_train)
         Beta[1:N_train+1,1:N_train+1] = omega + pow(gamma,-1) * np.identity(N_train)
