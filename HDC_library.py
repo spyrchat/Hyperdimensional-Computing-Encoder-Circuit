@@ -26,6 +26,7 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
         for cl in range(n_class):
             final_HDC_centroid = centroids[cl]
              #compute LS-SVM response
+             
             response = # -> INSERT YOUR CODE 
             all_resp[cl] = response
         
@@ -121,22 +122,28 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
 
         # Get HDC prototype for class cla, still in floating point
         final_HDC_centroid = []
+        final_HDC_centroid_q = []
         for i in range(N_train):
             final_HDC_centroid[i] = sum(Y_train[i]*alpha[i]*HDC_cont_train[i]) #this is mu(vector) from the slides
+            final_HDC_centroid_q[i] = final_HDC_centroid[i] & 2**D_b-1
         
         # Quantize HDC prototype to D_b-bit
-        final_HDC_centroid_q = final_HDC_centroid & 2**D_b-1
+        #final_HDC_centroid_q = final_HDC_centroid & 2**D_b-1
         #Amplification factor for the LS-SVM bias
-        fact = (final_HDC_centroid & 2**D_b-1)/final_HDC_centroid_q
-        if np.max(np.abs(final_HDC_centroid)) == 0:
+        final_HDC_centroid_np = np.array(final_HDC_centroid)
+        final_HDC_centroid_q_np = np.array(final_HDC_centroid_q)
+        max = np.max(np.abs(final_HDC_centroid_np))
+        fact = (2**D_b-1)/max
+
+        if np.max(np.abs(final_HDC_centroid_np)) == 0:
             print("Kernel matrix badly conditionned! Ignoring...")
-            centroids_q.append(np.ones(final_HDC_centroid_q.shape)) #trying to manage badly conditioned matrices, do not touch
+            centroids_q.append(np.ones(final_HDC_centroid_q_np.shape)) #trying to manage badly conditioned matrices, do not touch
             biases_q.append(10000)
         else:
-            centroids_q.append(final_HDC_centroid_q*1)
+            centroids_q.append(final_HDC_centroid_q_np*1)
             biases_q.append(alpha[0]*fact)
             
-        centroids.append(final_HDC_centroid*1)
+        centroids.append(final_HDC_centroid_np*1)
         biases.append(alpha[0])
         
     return centroids, biases, centroids_q, biases_q
@@ -155,16 +162,21 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
     local_avgre = np.zeros(Nbr_of_trials)
     local_sparse = np.zeros(Nbr_of_trials)
     #Estimate F(x) over "Nbr_of_trials" trials
-    for trial_ in range(Nbr_of_trials): 
+    for trial_ in range(Nbr_of_trials): # nr of patients
         HDC_cont_all, LABELS = shuffle(HDC_cont_all, LABELS) # Shuffle dataset for random train-test split
             
         HDC_cont_train_ = HDC_cont_all[:N_train,:] # Take training set
         HDC_cont_train_cpy = HDC_cont_train_ * 1
         # Apply cyclic accumulation with biases and accumulation speed beta_
         
-        cyclic_accumulation = HDC_cont_train_cpy % (2 ** B_cnt)
-        
+        cyclic_accumulation_train = HDC_cont_train_cpy % (2 ** B_cnt)
+        cyclic_accumulation_train_vector = np.array(cyclic_accumulation_train[trial_])
+        cyclic_accumulation_train_vector[cyclic_accumulation_train_vector > alpha_sp] = 1
+        cyclic_accumulation_train_vector[cyclic_accumulation_train_vector >= -alpha_sp and cyclic_accumulation_train_vector <= alpha_sp] = 0
+        cyclic_accumulation_train_vector[cyclic_accumulation_train_vector < alpha_sp] = -1
         # Ternary thresholding with threshold alpha_sp:
+
+        '''
         for i in cyclic_accumulation:
             cyclic_accumulation[i] =  cyclic_accumulation[i] - (2 ** B_cnt)
             if cyclic_accumulation[i] > alpha_sp:
@@ -173,6 +185,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
                 HDC_cont_train_cpy[i] = 0
             else:
                 HDC_cont_train_cpy[i] = -1
+        '''
 
 
 
@@ -188,9 +201,14 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         
         # Apply cyclic accumulation with biases and accumulation speed beta_
         
-        cyclic_accumulation = HDC_cont_test_cpy % (2 ** B_cnt)
+        cyclic_accumulation_test = HDC_cont_test_cpy % (2 ** B_cnt)
+        cyclic_accumulation_test_vector = np.array(cyclic_accumulation_test[trial_])
+        cyclic_accumulation_test_vector[cyclic_accumulation_test_vector > alpha_sp] = 1
+        cyclic_accumulation_test_vector[cyclic_accumulation_test_vector >= -alpha_sp and cyclic_accumulation_test_vector <= alpha_sp] = 0
+        cyclic_accumulation_test_vector[cyclic_accumulation_test_vector < alpha_sp] = -1
         
         # Ternary thresholding with threshold alpha_sp:
+        '''
         for i in cyclic_accumulation:
             cyclic_accumulation[i] =  cyclic_accumulation[i] - (2 ** B_cnt)
             if cyclic_accumulation[i] > alpha_sp:
@@ -199,6 +217,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
                 HDC_cont_test_cpy[i] = 0
             else:
                 HDC_cont_test_cpy[i] = -1
+        '''
         
         Y_test = LABELS[N_train:] - 1
         Y_test = Y_test.astype(int)
