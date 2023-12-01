@@ -120,12 +120,14 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         b = v[0]
 
         # Get HDC prototype for class cla, still in floating point
-        final_HDC_centroid = sum(alpha*HDC_cont_train) #this is mu(vector) from the slides
+        final_HDC_centroid = []
+        for i in range(N_train):
+            final_HDC_centroid[i] = sum(Y_train[i]*alpha[i]*HDC_cont_train[i]) #this is mu(vector) from the slides
         
         # Quantize HDC prototype to D_b-bit
         final_HDC_centroid_q = final_HDC_centroid & 2**D_b-1
         #Amplification factor for the LS-SVM bias
-        fact = final_HDC_centroid_q/(2**D_b)
+        fact = (final_HDC_centroid & 2**D_b-1)/final_HDC_centroid_q
         if np.max(np.abs(final_HDC_centroid)) == 0:
             print("Kernel matrix badly conditionned! Ignoring...")
             centroids_q.append(np.ones(final_HDC_centroid_q.shape)) #trying to manage badly conditioned matrices, do not touch
