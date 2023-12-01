@@ -20,14 +20,16 @@ from scipy.linalg import lu_factor, lu_solve
 def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
     Acc = 0
     n_class = np.max(Y_test) + 1
-    for i in range(Y_test.shape[0]):
+    for i in range(Y_test.shape[0]): # Y_test.shape[0] = rows of Y_test = each patient
         received_HDC_vector = HDC_cont_test[i]
         all_resp = np.zeros(n_class)
-        for cl in range(n_class):
+        for cl in range(n_class): # classes is true or false (cancer or no cancer)
             final_HDC_centroid = centroids[cl]
              #compute LS-SVM response
-             
-            response = # -> INSERT YOUR CODE 
+            response = np.tranpose(final_HDC_centroid) * HDC_cont_test + biases
+            response[response >= 0] = 1
+            response[response < 0] = -1
+
             all_resp[cl] = response
         
         class_idx = np.argmax(all_resp)
@@ -103,7 +105,7 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
             
         for i in range(N_train):
             for j in range(N_train):
-                omega[i, j] = Y_train[i] * Y_train[j] * HDC_cont_train[i] * HDC_cont_train[j]
+                omega[i, j] = Y_train[i] * Y_train[j] * np.transpose(HDC_cont_train[i]) * HDC_cont_train[j]
         
         Beta[1:N_train+1,0] = Y_train
         Beta[0,1:N_train+1] = np.transpose(Y_train)
