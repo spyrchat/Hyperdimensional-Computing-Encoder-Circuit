@@ -21,12 +21,12 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
     Acc = 0
     n_class = np.max(Y_test) + 1
     for i in range(Y_test.shape[0]): # Y_test.shape[0] = rows of Y_test = each patient
-        received_HDC_vector = HDC_cont_test[i]
+        received_HDC_vector = (HDC_cont_test[i])
         all_resp = np.zeros(n_class)
         for cl in range(n_class): # classes is true or false (cancer or no cancer)
-            final_HDC_centroid = centroids[cl]
+            final_HDC_centroid = (centroids[cl])
              #compute LS-SVM response
-            response = np.tranpose(final_HDC_centroid) * HDC_cont_test + biases
+            response = np.transpose(final_HDC_centroid) * HDC_cont_test + biases
             response[response >= 0] = 1
             response[response < 0] = -1
 
@@ -98,14 +98,14 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
     for cla in range(n_class):
         #The steps below implement the LS-SVM training, check out the course notes, we are just implementing that
         #Beta.alpha = L -> alpha (that we want) 
-        Beta = np.zeros(N_train+1, N_train+1) #LS-SVM regression matrix
-        omega = np.zeros(N_train, N_train)
+        Beta = np.zeros((N_train+1, N_train+1)) #LS-SVM regression matrix
+        omega = np.zeros((N_train, N_train))
         #Fill Beta:
         
             
         for i in range(N_train):
             for j in range(N_train):
-                omega[i, j] = Y_train[i] * Y_train[j] * np.transpose(HDC_cont_train[i]) * HDC_cont_train[j]
+                omega[i, j] = Y_train[i] * Y_train[j] * np.dot(np.transpose(HDC_cont_train[i]), HDC_cont_train[j])
         
         Beta[1:N_train+1,0] = Y_train
         Beta[0,1:N_train+1] = np.transpose(Y_train)
@@ -116,18 +116,22 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         L[1:N_train+1] = np.ones(N_train)
         
         #Solve the system of equations to get the vector alpha:     
-        v = np.zeros(N_train+1)
+        alpha = np.zeros(N_train+1)
         lu, piv = lu_factor(Beta)
-        v = lu_solve((lu,piv),L)
-        alpha = v[1:N_train+1]
-        b = v[0]
+        alpha = lu_solve((lu,piv),L) #alpha here is the whole v vector from the slides
 
         # Get HDC prototype for class cla, still in floating point
-        final_HDC_centroid = []
-        final_HDC_centroid_q = []
+        final_HDC_centroid = np.zeros((N_train,1))
+        final_HDC_centroid_q = np.zeros((N_train,1))
+        print("Y_train = ", np.shape(Y_train))
+        print("alpha = ", np.shape(alpha))
+        print("HDC_cont_train = ",np.shape(HDC_cont_train))
+
         for i in range(N_train):
-            final_HDC_centroid[i] = sum(Y_train[i]*alpha[i]*HDC_cont_train[i]) #this is mu(vector) from the slides
-            final_HDC_centroid_q[i] = final_HDC_centroid[i] & 2**D_b-1
+            print("i = ",i)
+            final_HDC_centroid[i] = np.sum(Y_train[i]*alpha[i+1]*HDC_cont_train[i]) #this is mu(vector) from the slides
+            final_HDC_centroid_q[i] = final_HDC_centroid[i] #& 2**D_b-1
+
         
         # Quantize HDC prototype to D_b-bit
         #final_HDC_centroid_q = final_HDC_centroid & 2**D_b-1
@@ -174,7 +178,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         cyclic_accumulation_train = HDC_cont_train_cpy % (2 ** B_cnt)
         cyclic_accumulation_train_vector = np.array(cyclic_accumulation_train[trial_])
         cyclic_accumulation_train_vector[cyclic_accumulation_train_vector > alpha_sp] = 1
-        cyclic_accumulation_train_vector[cyclic_accumulation_train_vector >= -alpha_sp and cyclic_accumulation_train_vector <= alpha_sp] = 0
+        cyclic_accumulation_train_vector[(cyclic_accumulation_train_vector >= -alpha_sp) & (cyclic_accumulation_train_vector <= alpha_sp)] = 0
         cyclic_accumulation_train_vector[cyclic_accumulation_train_vector < alpha_sp] = -1
         # Ternary thresholding with threshold alpha_sp:
 
@@ -206,7 +210,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         cyclic_accumulation_test = HDC_cont_test_cpy % (2 ** B_cnt)
         cyclic_accumulation_test_vector = np.array(cyclic_accumulation_test[trial_])
         cyclic_accumulation_test_vector[cyclic_accumulation_test_vector > alpha_sp] = 1
-        cyclic_accumulation_test_vector[cyclic_accumulation_test_vector >= -alpha_sp and cyclic_accumulation_test_vector <= alpha_sp] = 0
+        cyclic_accumulation_test_vector[(cyclic_accumulation_test_vector >= -alpha_sp) & (cyclic_accumulation_test_vector <= alpha_sp)] = 0
         cyclic_accumulation_test_vector[cyclic_accumulation_test_vector < alpha_sp] = -1
         
         # Ternary thresholding with threshold alpha_sp:
