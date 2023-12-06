@@ -128,7 +128,6 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         print("HDC_cont_train = ",np.shape(HDC_cont_train))
 
         for i in range(N_train):
-            print("i = ",i)
             final_HDC_centroid[i] = np.sum(Y_train[i]*alpha[i+1]*HDC_cont_train[i]) #this is mu(vector) from the slides
             final_HDC_centroid_q[i] = final_HDC_centroid[i] #& 2**D_b-1
 
