@@ -17,6 +17,33 @@ from scipy.linalg import lu_factor, lu_solve
 
 # Receives the HDC encoded test set "HDC_cont_test" and test labels "Y_test"
 # Computes test accuracy w.r.t. the HDC prototypes (centroids) and the biases found at training time
+'''
+def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
+    Acc = 0
+    n_class = np.max(Y_test) + 1
+    print("HDC_cont_test =", np.shape(HDC_cont_test))
+    print("centroids =",np.shape(centroids))
+    
+    for i in range(Y_test.shape[0]): # Y_test.shape[0] = rows of Y_test = each patient
+        received_HDC_vector = (HDC_cont_test[i])
+        print("received_HDC_vector =",np.shape(received_HDC_vector))
+        all_resp = np.zeros(n_class)
+        for cl in range(n_class): # classes is true or false (cancer or no cancer)
+            final_HDC_centroid = (centroids[cl])
+            print("final_HDC_centroid =", np.shape(final_HDC_centroid))
+             #compute LS-SVM response
+            response = np.transpose(final_HDC_centroid) * received_HDC_vector + biases[cl]
+            response[response >= 0] = 1
+            response[response < 0] = -1
+
+            all_resp[cl] = response
+        
+        class_idx = np.argmax(all_resp)
+        if class_idx == Y_test[i]:
+            Acc += 1
+            
+    return Acc/Y_test.shape[0]
+'''
 def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
     Acc = 0
     n_class = np.max(Y_test) + 1
@@ -25,13 +52,15 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
         all_resp = np.zeros(n_class)
         for cl in range(n_class): # classes is true or false (cancer or no cancer)
             final_HDC_centroid = (centroids[cl])
-             #compute LS-SVM response
-            response = np.transpose(final_HDC_centroid) * HDC_cont_test + biases
-            response[response >= 0] = 1
-            response[response < 0] = -1
+            #compute LS-SVM response
+            response = np.dot(np.transpose(final_HDC_centroid),received_HDC_vector) + biases[cl]
+            if response < 0:
+                response = -1
+            else:
+                response = 1
+
 
             all_resp[cl] = response
-        
         class_idx = np.argmax(all_resp)
         if class_idx == Y_test[i]:
             Acc += 1
@@ -54,15 +83,7 @@ def lookup_generate(dim, n_keys, mode = 1):
             probability = i / (n_keys)
             row =  np.random.choice([-1, 1], size=(dim), p=[1-probability, probability])
             table = np.vstack((table, row))
-
-    return table.astype(np.int8)
-    
-
-# Performs "part" of the HDC encoding (only input encoding, position encoding and bundling), without the thresholding at the end.
-# Returns H = bundle_along_features(P.L)
-# img is the input feature vector to be encoded
-# position_table is the random matrix of mode == 0
-# grayscale_table is the input encoding LUT of mode == 1
+-2 1
 # dim is the HDC dimensionality D
 def encode_HDC_RFF(img, position_table, grayscale_table, dim):
     img_hv = np.zeros(dim, dtype=np.int16)
@@ -88,7 +109,7 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
 # n_class: number of classes
 # N_train: number of data points in training set
 # gamma: LS-SVM regularization
-# D_b: number of bit for HDC prototype quantization
+# D_b: number of bit for HDC prototype quantization-2
 def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
     centroids = []
     centroids_q = []
@@ -96,13 +117,13 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
     biases = []
     Y_train = np.array(Y_train_init)
     for cla in range(n_class):
+        if cla == 1:
+            Y_train = Y_train*(-1)
         #The steps below implement the LS-SVM training, check out the course notes, we are just implementing that
         #Beta.alpha = L -> alpha (that we want) 
         Beta = np.zeros((N_train+1, N_train+1)) #LS-SVM regression matrix
         omega = np.zeros((N_train, N_train))
         #Fill Beta:
-        
-            
         for i in range(N_train):
             for j in range(N_train):
                 omega[i, j] = Y_train[i] * Y_train[j] * np.dot(np.transpose(HDC_cont_train[i]), HDC_cont_train[j])
@@ -117,38 +138,37 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         
         #Solve the system of equations to get the vector alpha:     
         alpha = np.zeros(N_train+1)
-        lu, piv = lu_factor(Beta)
-        alpha = lu_solve((lu,piv),L) #alpha here is the whole v vector from the slides
+        alpha = np.linalg.solve(Beta,L) #alpha here is the whole v vector from the slides
 
         # Get HDC prototype for class cla, still in floating point
-        final_HDC_centroid = np.zeros((N_train,1))
-        final_HDC_centroid_q = np.zeros((N_train,1))
-        print("Y_train = ", np.shape(Y_train))
-        print("alpha = ", np.shape(alpha))
-        print("HDC_cont_train = ",np.shape(HDC_cont_train))
+        final_HDC_centroid = np.zeros(100)
+        final_HDC_centroid_q = np.zeros(100)
+        #print("final_HDC_centroid =",np.shape(final_HDC_centroid))
+        #print("Y_train = ", np.shape(Y_train))
+        #print("alpha = ", np.shape(alpha))
+        #print("HDC_cont_train = ",np.shape(HDC_cont_train[1]))
 
         for i in range(N_train):
-            final_HDC_centroid[i] = np.sum(Y_train[i]*alpha[i+1]*HDC_cont_train[i]) #this is mu(vector) from the slides
-            final_HDC_centroid_q[i] = final_HDC_centroid[i] #& 2**D_b-1
-
+            final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i+1]*HDC_cont_train[i] #this is mu(vector) from the slides
+            print("value of Y_train[i]*alpha[i+1]*HDC_cont_train[i] =", Y_train[i],alpha[i+1],HDC_cont_train[i])
+            final_HDC_centroid_q = final_HDC_centroid #& 2**D_b-1
         
         # Quantize HDC prototype to D_b-bit
         #final_HDC_centroid_q = final_HDC_centroid & 2**D_b-1
+
         #Amplification factor for the LS-SVM bias
-        final_HDC_centroid_np = np.array(final_HDC_centroid)
-        final_HDC_centroid_q_np = np.array(final_HDC_centroid_q)
-        max = np.max(np.abs(final_HDC_centroid_np))
+        max = np.max(np.abs(final_HDC_centroid))
         fact = (2**D_b-1)/max
 
-        if np.max(np.abs(final_HDC_centroid_np)) == 0:
+        if np.max(np.abs(final_HDC_centroid)) == 0:
             print("Kernel matrix badly conditionned! Ignoring...")
-            centroids_q.append(np.ones(final_HDC_centroid_q_np.shape)) #trying to manage badly conditioned matrices, do not touch
+            centroids_q.append(np.ones(final_HDC_centroid_q.shape)) #trying to manage badly conditioned matrices, do not touch
             biases_q.append(10000)
         else:
-            centroids_q.append(final_HDC_centroid_q_np*1)
+            centroids_q.append(final_HDC_centroid_q*1)
             biases_q.append(alpha[0]*fact)
             
-        centroids.append(final_HDC_centroid_np*1)
+        centroids.append(final_HDC_centroid*1)
         biases.append(alpha[0])
         
     return centroids, biases, centroids_q, biases_q
@@ -166,6 +186,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
     local_avg = np.zeros(Nbr_of_trials)
     local_avgre = np.zeros(Nbr_of_trials)
     local_sparse = np.zeros(Nbr_of_trials)
+
     #Estimate F(x) over "Nbr_of_trials" trials
     for trial_ in range(Nbr_of_trials): # nr of patients
         HDC_cont_all, LABELS = shuffle(HDC_cont_all, LABELS) # Shuffle dataset for random train-test split
@@ -175,10 +196,13 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         # Apply cyclic accumulation with biases and accumulation speed beta_
         
         cyclic_accumulation_train = HDC_cont_train_cpy % (2 ** B_cnt)
-        cyclic_accumulation_train_vector = np.array(cyclic_accumulation_train[trial_])
-        cyclic_accumulation_train_vector[cyclic_accumulation_train_vector > alpha_sp] = 1
-        cyclic_accumulation_train_vector[(cyclic_accumulation_train_vector >= -alpha_sp) & (cyclic_accumulation_train_vector <= alpha_sp)] = 0
-        cyclic_accumulation_train_vector[cyclic_accumulation_train_vector < alpha_sp] = -1
+        HDC_cont_train_cyclic = np.zeros((cyclic_accumulation_train.shape[0],100))
+        for row in range(cyclic_accumulation_train.shape[0]):
+            cyclic_accumulation_train_vector = np.array(cyclic_accumulation_train[row])
+            cyclic_accumulation_train_vector[cyclic_accumulation_train_vector > alpha_sp] = 1
+            cyclic_accumulation_train_vector[(cyclic_accumulation_train_vector >= -alpha_sp) & (cyclic_accumulation_train_vector <= alpha_sp)] = 0
+            cyclic_accumulation_train_vector[cyclic_accumulation_train_vector < alpha_sp] = -1
+            HDC_cont_train_cyclic[row] = cyclic_accumulation_train_vector
         # Ternary thresholding with threshold alpha_sp:
 
         '''
@@ -198,7 +222,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         Y_train = Y_train.astype(int)
         
         # Train the HDC system to find the prototype hypervectors, _q meqns quantized
-        centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train_cpy, gamma, D_b)
+        centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train_cyclic, gamma, D_b)
         
         # Do the same encoding steps with the test set
         HDC_cont_test_ = HDC_cont_all[N_train:,:]
@@ -207,10 +231,13 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         # Apply cyclic accumulation with biases and accumulation speed beta_
         
         cyclic_accumulation_test = HDC_cont_test_cpy % (2 ** B_cnt)
-        cyclic_accumulation_test_vector = np.array(cyclic_accumulation_test[trial_])
-        cyclic_accumulation_test_vector[cyclic_accumulation_test_vector > alpha_sp] = 1
-        cyclic_accumulation_test_vector[(cyclic_accumulation_test_vector >= -alpha_sp) & (cyclic_accumulation_test_vector <= alpha_sp)] = 0
-        cyclic_accumulation_test_vector[cyclic_accumulation_test_vector < alpha_sp] = -1
+        HDC_cont_test_cyclic = np.zeros((cyclic_accumulation_test.shape[0],100))
+        for row in range(cyclic_accumulation_test.shape[0]):
+            cyclic_accumulation_test_vector = np.array(cyclic_accumulation_test[row])
+            cyclic_accumulation_test_vector[cyclic_accumulation_test_vector > alpha_sp] = 1
+            cyclic_accumulation_test_vector[(cyclic_accumulation_test_vector >= -alpha_sp) & (cyclic_accumulation_test_vector <= alpha_sp)] = 0
+            cyclic_accumulation_test_vector[cyclic_accumulation_test_vector < alpha_sp] = -1
+            HDC_cont_test_cyclic[row] = cyclic_accumulation_test_vector
         
         # Ternary thresholding with threshold alpha_sp:
         '''
@@ -228,7 +255,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         Y_test = Y_test.astype(int)
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
-        Acc = compute_accuracy(HDC_cont_test_cpy, Y_test, centroids_q, biases_q)
+        Acc = compute_accuracy(HDC_cont_test_cyclic, Y_test, centroids, biases)
         sparsity_HDC_centroid = np.array(centroids_q).flatten() 
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
         SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])

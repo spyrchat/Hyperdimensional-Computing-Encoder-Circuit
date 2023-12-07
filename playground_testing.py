@@ -112,7 +112,7 @@ N_tradeof_points = lambda_sp.shape[0]
 DATASET = np.loadtxt(dataset_path, dtype = object, delimiter = ',', skiprows = 1)
 X = DATASET[:,2:].astype(float)
 LABELS = DATASET[:,1]
-LABELS[LABELS == 'M'] = 1
+LABELS[LABELS == 'M'] = 0
 LABELS[LABELS == 'B'] = 2
 LABELS = LABELS.astype(float)
 X = X.T / np.max(X, axis = 1)
