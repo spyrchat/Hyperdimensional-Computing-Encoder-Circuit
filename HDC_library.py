@@ -83,23 +83,20 @@ def lookup_generate(dim, n_keys, mode = 1):
             probability = i / (n_keys)
             row =  np.random.choice([-1, 1], size=(dim), p=[1-probability, probability])
             table = np.vstack((table, row))
-            
+
     return table.astype(np.int8)
 
 # dim is the HDC dimensionality D
 def encode_HDC_RFF(img, position_table, grayscale_table, dim):
     img_hv = np.zeros(dim, dtype=np.int16)
     container = np.zeros((len(position_table), dim))
+    
     #Get the input-encoding and XOR-ing result:  
     for pixel in range(len(position_table)):
         xor_result = (grayscale_table[pixel] ^ position_table[pixel])
         xor_result = (xor_result != 0).astype(int)
-        
-        # ba = math.log(len(position_table), 2)
-        # xor_result[xor_result == 0] = -1
-        # counter = xor_result.sum(axis=0)
+        xor_result[xor_result == 0] = -1
             
-
         hv = xor_result
         container[pixel, :] = hv*1
         
@@ -152,7 +149,6 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
 
         for i in range(N_train):
             final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i+1]*HDC_cont_train[i] #this is mu(vector) from the slides
-            print("value of Y_train[i]*alpha[i+1]*HDC_cont_train[i] =", Y_train[i],alpha[i+1],HDC_cont_train[i])
             final_HDC_centroid_q = final_HDC_centroid #& 2**D_b-1
         
         # Quantize HDC prototype to D_b-bit
@@ -196,15 +192,17 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         HDC_cont_train_ = HDC_cont_all[:N_train,:] # Take training set
         HDC_cont_train_cpy = HDC_cont_train_ * 1
         # Apply cyclic accumulation with biases and accumulation speed beta_
-        
         cyclic_accumulation_train = HDC_cont_train_cpy % (2 ** B_cnt)
         HDC_cont_train_cyclic = np.zeros((cyclic_accumulation_train.shape[0],100))
         for row in range(cyclic_accumulation_train.shape[0]):
             cyclic_accumulation_train_vector = np.array(cyclic_accumulation_train[row])
+            #print("cyclic_accumulation_train_vector =",cyclic_accumulation_train_vector)
             cyclic_accumulation_train_vector[cyclic_accumulation_train_vector > alpha_sp] = 1
             cyclic_accumulation_train_vector[(cyclic_accumulation_train_vector >= -alpha_sp) & (cyclic_accumulation_train_vector <= alpha_sp)] = 0
             cyclic_accumulation_train_vector[cyclic_accumulation_train_vector < alpha_sp] = -1
             HDC_cont_train_cyclic[row] = cyclic_accumulation_train_vector
+            
+            #print("alpha_sp =",alpha_sp)
         # Ternary thresholding with threshold alpha_sp:
 
         '''
