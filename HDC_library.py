@@ -102,29 +102,23 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         L[1:N_train+1] = np.ones(N_train)
         
         #Solve the system of equations to get the vector alpha:     
-        alpha = np.zeros(N_train+1)
+        alpha = np.zeros(N_train)
         alpha = np.linalg.solve(Beta,L) #alpha here is the whole v vector from the slides
 
         # Get HDC prototype for class cla, still in floating point
         final_HDC_centroid = np.zeros(100)
         final_HDC_centroid_q = np.zeros(100)
-        #print("final_HDC_centroid =",np.shape(final_HDC_centroid))
-        #print("Y_train = ", np.shape(Y_train))
-        #print("alpha = ", np.shape(alpha))
-        #print("HDC_cont_train = ",np.shape(HDC_cont_train[1]))
-        #print("phi: ",HDC_cont_train)
+
         for i in range(N_train):
             final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i]*HDC_cont_train[i] #this is mu(vector) from the slides
         min_val = np.min(final_HDC_centroid)
         max_val = np.max(final_HDC_centroid)
-        #print("CENTROID", final_HDC_centroid)
         range_val = max_val - min_val
-        #print("range ", range_val)
         # Calculate the size of each quantization interval
         interval_size = range_val / (2**D_b - 1)
         # Quantize HDC prototype to D_b-bit 
         final_HDC_centroid_q = np.round((final_HDC_centroid - min_val) / interval_size) * interval_size + min_val
-        #print(final_HDC_centroid_q)    
+        #print(final_HDC_centroid_q)
             
 
         #Amplification factor for the LS-SVM bias
