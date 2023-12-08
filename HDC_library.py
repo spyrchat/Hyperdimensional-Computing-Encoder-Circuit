@@ -1,49 +1,10 @@
-"""
-Design of a Hyperdimensional Computing Circuit for Bio-signal Classification via Nelder-Mead optimization
-and LS-SVM Training.
-
-*HDC library*
-
-Computer-Aided IC Design (B-KUL-H05D7A)
-
-ir. Ali Safa, ir. Sergio Massaioli, Prof. Georges Gielen (MICAS-IMEC-KU Leuven)
-
-(Author: A. Safa)
-"""
-
 import numpy as np
 from sklearn.utils import shuffle
 from scipy.linalg import lu_factor, lu_solve
 
 # Receives the HDC encoded test set "HDC_cont_test" and test labels "Y_test"
 # Computes test accuracy w.r.t. the HDC prototypes (centroids) and the biases found at training time
-'''
-def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
-    Acc = 0
-    n_class = np.max(Y_test) + 1
-    print("HDC_cont_test =", np.shape(HDC_cont_test))
-    print("centroids =",np.shape(centroids))
-    
-    for i in range(Y_test.shape[0]): # Y_test.shape[0] = rows of Y_test = each patient
-        received_HDC_vector = (HDC_cont_test[i])
-        print("received_HDC_vector =",np.shape(received_HDC_vector))
-        all_resp = np.zeros(n_class)
-        for cl in range(n_class): # classes is true or false (cancer or no cancer)
-            final_HDC_centroid = (centroids[cl])
-            print("final_HDC_centroid =", np.shape(final_HDC_centroid))
-             #compute LS-SVM response
-            response = np.transpose(final_HDC_centroid) * received_HDC_vector + biases[cl]
-            response[response >= 0] = 1
-            response[response < 0] = -1
 
-            all_resp[cl] = response
-        
-        class_idx = np.argmax(all_resp)
-        if class_idx == Y_test[i]:
-            Acc += 1
-            
-    return Acc/Y_test.shape[0]
-'''
 def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
     Acc = 0
     n_class = np.max(Y_test) + 1
@@ -54,12 +15,12 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
             final_HDC_centroid = (centroids[cl])
             #compute LS-SVM response
             response = np.dot(np.transpose(final_HDC_centroid),received_HDC_vector) + biases[cl]
-            print("Responce before if: ", response)
+            #print("Responce before if: ", response)
             if response < 0:
                 response = -1
             else:
                 response = 1
-            print("Responce after if: ", response)
+            #print("Responce after if: ", response)
 
             all_resp[cl] = response
         class_idx = np.argmax(all_resp)
@@ -151,19 +112,19 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         #print("Y_train = ", np.shape(Y_train))
         #print("alpha = ", np.shape(alpha))
         #print("HDC_cont_train = ",np.shape(HDC_cont_train[1]))
-        print("phi: ",HDC_cont_train)
+        #print("phi: ",HDC_cont_train)
         for i in range(N_train):
             final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i]*HDC_cont_train[i] #this is mu(vector) from the slides
         min_val = np.min(final_HDC_centroid)
         max_val = np.max(final_HDC_centroid)
-        print("CENTROID", final_HDC_centroid)
+        #print("CENTROID", final_HDC_centroid)
         range_val = max_val - min_val
-        print("range ", range_val)
+        #print("range ", range_val)
         # Calculate the size of each quantization interval
         interval_size = range_val / (2**D_b - 1)
         # Quantize HDC prototype to D_b-bit 
         final_HDC_centroid_q = np.round((final_HDC_centroid - min_val) / interval_size) * interval_size + min_val
-        print(final_HDC_centroid_q)    
+        #print(final_HDC_centroid_q)    
             
 
         #Amplification factor for the LS-SVM bias
@@ -225,18 +186,6 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
             #print("alpha_sp =",alpha_sp)
         # Ternary thresholding with threshold alpha_sp:
 
-        '''
-        for i in cyclic_accumulation:
-            cyclic_accumulation[i] =  cyclic_accumulation[i] - (2 ** B_cnt)
-            if cyclic_accumulation[i] > alpha_sp:
-                HDC_cont_train_cpy[i] = 1
-            elif cyclic_accumulation[i] >= - alpha_sp and cyclic_accumulation[i] <= alpha_sp:
-                HDC_cont_train_cpy[i] = 0
-            else:
-                HDC_cont_train_cpy[i] = -1
-        '''
-
-
 
         Y_train = LABELS[:N_train] - 1
         Y_train = Y_train.astype(int)
@@ -256,9 +205,9 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
             cyclic_accumulation_test_vector = np.array(cyclic_accumulation_test[row])
         
             for i in range(len(cyclic_accumulation_test_vector)):
-                if cyclic_accumulation_test_vector[i] > alpha_sp:
+                if cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1) > alpha_sp:
                     cyclic_accumulation_test_vector[i] = 1
-                elif cyclic_accumulation_test_vector[i] < -alpha_sp:
+                elif cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1) < -alpha_sp:
                     cyclic_accumulation_test_vector[i] = -1
                 elif abs(cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1)) <= alpha_sp:
                     cyclic_accumulation_test_vector[i] = 0
@@ -268,22 +217,14 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
 
         
         # Ternary thresholding with threshold alpha_sp:
-        '''
-        for i in cyclic_accumulation:
-            cyclic_accumulation[i] =  cyclic_accumulation[i] - (2 ** B_cnt)
-            if cyclic_accumulation[i] > alpha_sp:
-                HDC_cont_test_cpy[i] = 1
-            elif cyclic_accumulation[i] >= - alpha_sp and cyclic_accumulation[i] <= alpha_sp:
-                HDC_cont_test_cpy[i] = 0
-            else:
-                HDC_cont_test_cpy[i] = -1
-        '''
+    
         
         Y_test = LABELS[N_train:] - 1
         Y_test = Y_test.astype(int)
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
         Acc = compute_accuracy(HDC_cont_test_cyclic, Y_test, centroids_q, biases)
+        print(Acc)
         sparsity_HDC_centroid = np.array(centroids_q).flatten() 
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
         SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])
