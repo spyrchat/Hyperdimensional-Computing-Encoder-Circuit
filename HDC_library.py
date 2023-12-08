@@ -254,13 +254,16 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         HDC_cont_test_cyclic = np.zeros((cyclic_accumulation_test.shape[0],100))
         for row in range(cyclic_accumulation_test.shape[0]):
             cyclic_accumulation_test_vector = np.array(cyclic_accumulation_test[row])
-            # Values greater than alpha_sp
-            cyclic_accumulation_test_vector[cyclic_accumulation_test_vector > alpha_sp] = 1
-            # Values between -alpha_sp and alpha_sp (inclusive)
-            cyclic_accumulation_test_vector[(cyclic_accumulation_test_vector >= -alpha_sp) & (cyclic_accumulation_test_vector <= alpha_sp)] = 0
-            # Values less than -alpha_sp
-            cyclic_accumulation_test_vector[cyclic_accumulation_test_vector < -alpha_sp] = -1
+        
+            for i in range(len(cyclic_accumulation_test_vector)):
+                if cyclic_accumulation_test_vector[i] > alpha_sp:
+                    cyclic_accumulation_test_vector[i] = 1
+                elif cyclic_accumulation_test_vector[i] < -alpha_sp:
+                    cyclic_accumulation_test_vector[i] = -1
+                elif abs(cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1)) <= alpha_sp:
+                    cyclic_accumulation_test_vector[i] = 0
             HDC_cont_test_cyclic[row] = cyclic_accumulation_test_vector
+
 
 
         
