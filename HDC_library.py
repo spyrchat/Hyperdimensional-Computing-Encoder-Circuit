@@ -1,49 +1,10 @@
-"""
-Design of a Hyperdimensional Computing Circuit for Bio-signal Classification via Nelder-Mead optimization
-and LS-SVM Training.
-
-*HDC library*
-
-Computer-Aided IC Design (B-KUL-H05D7A)
-
-ir. Ali Safa, ir. Sergio Massaioli, Prof. Georges Gielen (MICAS-IMEC-KU Leuven)
-
-(Author: A. Safa)
-"""
-
 import numpy as np
 from sklearn.utils import shuffle
 from scipy.linalg import lu_factor, lu_solve
 
 # Receives the HDC encoded test set "HDC_cont_test" and test labels "Y_test"
 # Computes test accuracy w.r.t. the HDC prototypes (centroids) and the biases found at training time
-'''
-def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
-    Acc = 0
-    n_class = np.max(Y_test) + 1
-    print("HDC_cont_test =", np.shape(HDC_cont_test))
-    print("centroids =",np.shape(centroids))
-    
-    for i in range(Y_test.shape[0]): # Y_test.shape[0] = rows of Y_test = each patient
-        received_HDC_vector = (HDC_cont_test[i])
-        print("received_HDC_vector =",np.shape(received_HDC_vector))
-        all_resp = np.zeros(n_class)
-        for cl in range(n_class): # classes is true or false (cancer or no cancer)
-            final_HDC_centroid = (centroids[cl])
-            print("final_HDC_centroid =", np.shape(final_HDC_centroid))
-             #compute LS-SVM response
-            response = np.transpose(final_HDC_centroid) * received_HDC_vector + biases[cl]
-            response[response >= 0] = 1
-            response[response < 0] = -1
 
-            all_resp[cl] = response
-        
-        class_idx = np.argmax(all_resp)
-        if class_idx == Y_test[i]:
-            Acc += 1
-            
-    return Acc/Y_test.shape[0]
-'''
 def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
     Acc = 0
     n_class = np.max(Y_test) + 1
@@ -225,17 +186,6 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
             #print("alpha_sp =",alpha_sp)
         # Ternary thresholding with threshold alpha_sp:
 
-        '''
-        for i in cyclic_accumulation:
-            cyclic_accumulation[i] =  cyclic_accumulation[i] - (2 ** B_cnt)
-            if cyclic_accumulation[i] > alpha_sp:
-                HDC_cont_train_cpy[i] = 1
-            elif cyclic_accumulation[i] >= - alpha_sp and cyclic_accumulation[i] <= alpha_sp:
-                HDC_cont_train_cpy[i] = 0
-            else:
-                HDC_cont_train_cpy[i] = -1
-        '''
-
 
 
         Y_train = LABELS[:N_train] - 1
@@ -256,9 +206,9 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
             cyclic_accumulation_test_vector = np.array(cyclic_accumulation_test[row])
         
             for i in range(len(cyclic_accumulation_test_vector)):
-                if cyclic_accumulation_test_vector[i] > alpha_sp:
+                if cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1) > alpha_sp:
                     cyclic_accumulation_test_vector[i] = 1
-                elif cyclic_accumulation_test_vector[i] < -alpha_sp:
+                elif cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1) < -alpha_sp:
                     cyclic_accumulation_test_vector[i] = -1
                 elif abs(cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1)) <= alpha_sp:
                     cyclic_accumulation_test_vector[i] = 0
@@ -268,16 +218,6 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
 
         
         # Ternary thresholding with threshold alpha_sp:
-        '''
-        for i in cyclic_accumulation:
-            cyclic_accumulation[i] =  cyclic_accumulation[i] - (2 ** B_cnt)
-            if cyclic_accumulation[i] > alpha_sp:
-                HDC_cont_test_cpy[i] = 1
-            elif cyclic_accumulation[i] >= - alpha_sp and cyclic_accumulation[i] <= alpha_sp:
-                HDC_cont_test_cpy[i] = 0
-            else:
-                HDC_cont_test_cpy[i] = -1
-        '''
         
         Y_test = LABELS[N_train:] - 1
         Y_test = Y_test.astype(int)
