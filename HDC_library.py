@@ -83,7 +83,9 @@ def lookup_generate(dim, n_keys, mode = 1):
             probability = i / (n_keys)
             row =  np.random.choice([-1, 1], size=(dim), p=[1-probability, probability])
             table = np.vstack((table, row))
--2 1
+            
+    return table.astype(np.int8)
+
 # dim is the HDC dimensionality D
 def encode_HDC_RFF(img, position_table, grayscale_table, dim):
     img_hv = np.zeros(dim, dtype=np.int16)
