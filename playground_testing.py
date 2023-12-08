@@ -7,7 +7,7 @@ from HDC_library import evaluate_F_of_x
 from HDC_library import encode_HDC_RFF
 from HDC_library import lookup_generate
 from sklearn.utils import shuffle
-
+np.set_printoptions(threshold=np.inf, linewidth=200)
 '''
 def lookup_generate(dim, n_keys, mode = 1):
     table = np.empty((0, dim)) 
@@ -49,7 +49,7 @@ def test_matrix_probability(LUT,in_p):
     plt.show()
 
 
-#LUT,p_in = lookup_generate(1024,256,1)
+#LUT,p_in = lookup_generate(1024,256,1)C
 #test_matrix_probability(LUT,p_in)
 
 dim = 1024

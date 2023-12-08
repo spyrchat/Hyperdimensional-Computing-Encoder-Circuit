@@ -151,11 +151,12 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         #print("Y_train = ", np.shape(Y_train))
         #print("alpha = ", np.shape(alpha))
         #print("HDC_cont_train = ",np.shape(HDC_cont_train[1]))
-
+        print("phi: ",HDC_cont_train)
         for i in range(N_train):
-            final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i+1]*HDC_cont_train[i] #this is mu(vector) from the slides
+            final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i]*HDC_cont_train[i] #this is mu(vector) from the slides
         min_val = np.min(final_HDC_centroid)
         max_val = np.max(final_HDC_centroid)
+        print("CENTROID", final_HDC_centroid)
         range_val = max_val - min_val
         print("range ", range_val)
         # Calculate the size of each quantization interval
@@ -205,13 +206,21 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         # Apply cyclic accumulation with biases and accumulation speed beta_
         cyclic_accumulation_train = HDC_cont_train_cpy % (2 ** B_cnt)
         HDC_cont_train_cyclic = np.zeros((cyclic_accumulation_train.shape[0],100))
+       
         for row in range(cyclic_accumulation_train.shape[0]):
             cyclic_accumulation_train_vector = np.array(cyclic_accumulation_train[row])
-            #print("cyclic_accumulation_train_vector =",cyclic_accumulation_train_vector)
-            cyclic_accumulation_train_vector[cyclic_accumulation_train_vector > alpha_sp] = 1
-            cyclic_accumulation_train_vector[(cyclic_accumulation_train_vector >= -alpha_sp) & (cyclic_accumulation_train_vector <= alpha_sp)] = 0
-            cyclic_accumulation_train_vector[cyclic_accumulation_train_vector < alpha_sp] = -1
+    
+            for i in range(len(cyclic_accumulation_train_vector)):
+                if cyclic_accumulation_train_vector[i] - pow(2,B_cnt-1) > alpha_sp:
+                    cyclic_accumulation_train_vector[i]  = 1
+                elif cyclic_accumulation_train_vector[i] - pow(2,B_cnt-1)< -alpha_sp:
+                    cyclic_accumulation_train_vector[i] = -1
+                elif abs(cyclic_accumulation_train_vector[i] - pow(2,B_cnt-1)) <= alpha_sp:
+                    cyclic_accumulation_train_vector[i] = 0
+
             HDC_cont_train_cyclic[row] = cyclic_accumulation_train_vector
+
+
             
             #print("alpha_sp =",alpha_sp)
         # Ternary thresholding with threshold alpha_sp:
@@ -245,10 +254,15 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         HDC_cont_test_cyclic = np.zeros((cyclic_accumulation_test.shape[0],100))
         for row in range(cyclic_accumulation_test.shape[0]):
             cyclic_accumulation_test_vector = np.array(cyclic_accumulation_test[row])
+            # Values greater than alpha_sp
             cyclic_accumulation_test_vector[cyclic_accumulation_test_vector > alpha_sp] = 1
+            # Values between -alpha_sp and alpha_sp (inclusive)
             cyclic_accumulation_test_vector[(cyclic_accumulation_test_vector >= -alpha_sp) & (cyclic_accumulation_test_vector <= alpha_sp)] = 0
-            cyclic_accumulation_test_vector[cyclic_accumulation_test_vector < alpha_sp] = -1
+            # Values less than -alpha_sp
+            cyclic_accumulation_test_vector[cyclic_accumulation_test_vector < -alpha_sp] = -1
             HDC_cont_test_cyclic[row] = cyclic_accumulation_test_vector
+
+
         
         # Ternary thresholding with threshold alpha_sp:
         '''
