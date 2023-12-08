@@ -54,17 +54,22 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
             final_HDC_centroid = (centroids[cl])
             #compute LS-SVM response
             response = np.dot(np.transpose(final_HDC_centroid),received_HDC_vector) + biases[cl]
+            print("Responce before if: ", response)
             if response < 0:
                 response = -1
             else:
                 response = 1
-
+            print("Responce after if: ", response)
 
             all_resp[cl] = response
         class_idx = np.argmax(all_resp)
+        
+        if class_idx == 0:
+            class_idx = -1
+        
         if class_idx == Y_test[i]:
             Acc += 1
-            
+    print(Acc/Y_test.shape[0])        
     return Acc/Y_test.shape[0]
 
 
@@ -149,10 +154,16 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
 
         for i in range(N_train):
             final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i+1]*HDC_cont_train[i] #this is mu(vector) from the slides
-            final_HDC_centroid_q = final_HDC_centroid #& 2**D_b-1
-        
-        # Quantize HDC prototype to D_b-bit
-        #final_HDC_centroid_q = final_HDC_centroid & 2**D_b-1
+        min_val = np.min(final_HDC_centroid)
+        max_val = np.max(final_HDC_centroid)
+        range_val = max_val - min_val
+        print("range ", range_val)
+        # Calculate the size of each quantization interval
+        interval_size = range_val / (2**D_b - 1)
+        # Quantize HDC prototype to D_b-bit 
+        final_HDC_centroid_q = np.round((final_HDC_centroid - min_val) / interval_size) * interval_size + min_val
+        print(final_HDC_centroid_q)    
+            
 
         #Amplification factor for the LS-SVM bias
         max = np.max(np.abs(final_HDC_centroid))
@@ -186,7 +197,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
     local_sparse = np.zeros(Nbr_of_trials)
 
     #Estimate F(x) over "Nbr_of_trials" trials
-    for trial_ in range(Nbr_of_trials): # nr of patients
+    for trial_ in range(Nbr_of_trials): 
         HDC_cont_all, LABELS = shuffle(HDC_cont_all, LABELS) # Shuffle dataset for random train-test split
             
         HDC_cont_train_ = HDC_cont_all[:N_train,:] # Take training set
@@ -255,7 +266,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         Y_test = Y_test.astype(int)
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
-        Acc = compute_accuracy(HDC_cont_test_cyclic, Y_test, centroids, biases)
+        Acc = compute_accuracy(HDC_cont_test_cyclic, Y_test, centroids_q, biases)
         sparsity_HDC_centroid = np.array(centroids_q).flatten() 
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
         SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])
