@@ -15,12 +15,12 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
             final_HDC_centroid = (centroids[cl])
             #compute LS-SVM response
             response = np.dot(np.transpose(final_HDC_centroid),received_HDC_vector) + biases[cl]
-            print("Responce before if: ", response)
+            #print("Responce before if: ", response)
             if response < 0:
                 response = -1
             else:
                 response = 1
-            print("Responce after if: ", response)
+            #print("Responce after if: ", response)
 
             all_resp[cl] = response
         class_idx = np.argmax(all_resp)
@@ -30,7 +30,7 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
         
         if class_idx == Y_test[i]:
             Acc += 1
-    print(Acc/Y_test.shape[0])        
+    #print(Acc/Y_test.shape[0])        
     return Acc/Y_test.shape[0]
 
 
@@ -112,19 +112,19 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         #print("Y_train = ", np.shape(Y_train))
         #print("alpha = ", np.shape(alpha))
         #print("HDC_cont_train = ",np.shape(HDC_cont_train[1]))
-        print("phi: ",HDC_cont_train)
+        #print("phi: ",HDC_cont_train)
         for i in range(N_train):
             final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i]*HDC_cont_train[i] #this is mu(vector) from the slides
         min_val = np.min(final_HDC_centroid)
         max_val = np.max(final_HDC_centroid)
-        print("CENTROID", final_HDC_centroid)
+        #print("CENTROID", final_HDC_centroid)
         range_val = max_val - min_val
-        print("range ", range_val)
+        #print("range ", range_val)
         # Calculate the size of each quantization interval
         interval_size = range_val / (2**D_b - 1)
         # Quantize HDC prototype to D_b-bit 
         final_HDC_centroid_q = np.round((final_HDC_centroid - min_val) / interval_size) * interval_size + min_val
-        print(final_HDC_centroid_q)    
+        #print(final_HDC_centroid_q)    
             
 
         #Amplification factor for the LS-SVM bias
@@ -182,12 +182,8 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
             HDC_cont_train_cyclic[row] = cyclic_accumulation_train_vector
 
 
-            
-            #print("alpha_sp =",alpha_sp)
-        # Ternary thresholding with threshold alpha_sp:
-
-
-
+        
+        # Apply cyclic accumulation with biases and accumulation speed beta_
         Y_train = LABELS[:N_train] - 1
         Y_train = Y_train.astype(int)
         
@@ -198,7 +194,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         HDC_cont_test_ = HDC_cont_all[N_train:,:]
         HDC_cont_test_cpy = HDC_cont_test_ * 1
         
-        # Apply cyclic accumulation with biases and accumulation speed beta_
+        
         
         cyclic_accumulation_test = HDC_cont_test_cpy % (2 ** B_cnt)
         HDC_cont_test_cyclic = np.zeros((cyclic_accumulation_test.shape[0],100))
@@ -223,7 +219,8 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         Y_test = Y_test.astype(int)
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
-        Acc = compute_accuracy(HDC_cont_test_cyclic, Y_test, centroids_q, biases)
+        Acc = compute_accuracy(HDC_cont_train_cyclic, Y_test, centroids_q, biases)
+        print(Acc)
         sparsity_HDC_centroid = np.array(centroids_q).flatten() 
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
         SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])
