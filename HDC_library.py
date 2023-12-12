@@ -102,18 +102,13 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         L[1:N_train+1] = np.ones(N_train)
         
         #Solve the system of equations to get the vector alpha:     
-        alpha = np.zeros(N_train+1)
+        alpha = np.zeros(N_train)
         alpha = np.linalg.solve(Beta,L) #alpha here is the whole v vector from the slides
 
         # Get HDC prototype for class cla, still in floating point
-        final_HDC_centroid = np.zeros(100)
-        final_HDC_centroid_q = np.zeros(100)
-        #print("final_HDC_centroid =",np.shape(final_HDC_centroid))
-        #print("Y_train = ", np.shape(Y_train))
-        #print("alpha = ", np.shape(alpha))
-        #print("HDC_cont_train = ",np.shape(HDC_cont_train[1]))
-        #print("phi: ",HDC_cont_train)
-        #print("phi: ",HDC_cont_train)
+        final_HDC_centroid = np.zeros(np.shape(HDC_cont_train[0]))
+        final_HDC_centroid_q = np.zeros(np.shape(HDC_cont_train[0]))
+
         for i in range(N_train):
             final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i]*HDC_cont_train[i] #this is mu(vector) from the slides
         min_val = np.min(final_HDC_centroid)
@@ -127,8 +122,7 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         interval_size = range_val / (2**D_b - 1)
         # Quantize HDC prototype to D_b-bit 
         final_HDC_centroid_q = np.round((final_HDC_centroid - min_val) / interval_size) * interval_size + min_val
-        #print(final_HDC_centroid_q)    
-        #print(final_HDC_centroid_q)    
+        #print(final_HDC_centroid_q)
             
 
         #Amplification factor for the LS-SVM bias
@@ -170,7 +164,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         HDC_cont_train_cpy = HDC_cont_train_ * 1
         # Apply cyclic accumulation with biases and accumulation speed beta_
         cyclic_accumulation_train = HDC_cont_train_cpy % (2 ** B_cnt)
-        HDC_cont_train_cyclic = np.zeros((cyclic_accumulation_train.shape[0],100))
+        HDC_cont_train_cyclic = np.zeros((cyclic_accumulation_train.shape[0],HDC_cont_all.shape[1]))
        
         for row in range(cyclic_accumulation_train.shape[0]):
             cyclic_accumulation_train_vector = np.array(cyclic_accumulation_train[row])
@@ -201,7 +195,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         
         
         cyclic_accumulation_test = HDC_cont_test_cpy % (2 ** B_cnt)
-        HDC_cont_test_cyclic = np.zeros((cyclic_accumulation_test.shape[0],100))
+        HDC_cont_test_cyclic = np.zeros((cyclic_accumulation_test.shape[0],HDC_cont_all.shape[1]))
         for row in range(cyclic_accumulation_test.shape[0]):
             cyclic_accumulation_test_vector = np.array(cyclic_accumulation_test[row])
         
@@ -233,4 +227,4 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         local_avgre[trial_] = Acc
         local_sparse[trial_] = SPH
         
-    return local_avg, local_avgre, local_sparse
+    return local_avg, local_avgre, local_sparsegit config pull.rebase false

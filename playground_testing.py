@@ -90,15 +90,15 @@ def test_XOR(in1,in2,desired,dim):
 
 dataset_path = 'WISCONSIN/data.csv' 
 ##################################   
-imgsize_vector = 30 #Each input vector has 30 features
+imgsize_vector = 100 #Each input vector has 30 features
 n_class = 2
-D_b = 4 #We target 4-bit HDC prototypes
+D_b = 8 #We target 4-bit HDC prototypes
 B_cnt = 8
 maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
-D_HDC = 100 #HDC hypervector dimension
+D_HDC = 300 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
-Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs
-N_tradeof_points = 40 #Number of tradeoff points - use 100 
+Nbr_of_trials = 8 #Test accuracy averaged over Nbr_of_trials runs
+N_tradeof_points = 100 #Number of tradeoff points - use 100 
 N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
 #Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
