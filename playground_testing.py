@@ -171,7 +171,7 @@ bias_ = 0 # -> INSERT YOUR CODE #generate the random biases once
 print("X dimension =",X.shape)
 print("position table =", np.shape(position_table))
 print("grayscale table =", np.shape(grayscale_table))
-for i in range(X.shape[0]):
+for i in range(X.shape[0]): # for every patient
     if i%100 == 0:
         print(str(i) + "/" + str(X.shape[0]))
     HDC_cont_all[i,:] = encode_HDC_RFF(np.round((maxval - 1) * X[i,:]).astype(int), position_table, grayscale_table, D_HDC)

@@ -43,24 +43,26 @@ def lookup_generate(dim, n_keys, mode = 1):
     prob_array = [0] * n_keys
     if mode == 0:   
         table =  np.random.choice([-1, 1], size=(n_keys,dim), p=[0.5, 0.5])
-        #table = np.vstack((table, row))
     else:
         for i in range(n_keys):
             probability = i / (n_keys-1)
             row =  np.random.choice([-1, 1], size=(dim), p=[1-probability, probability])
-            np.vstack((table, row))
+            table[i,:] = row
             prob_array[i] = probability
 
     return table.astype(np.int8),prob_array
 
 # dim is the HDC dimensionality D
 def encode_HDC_RFF(img, position_table, grayscale_table, dim):
+    #img containts the 30 features of the current patient
     img_hv = np.zeros(dim, dtype=np.int16)
     container = np.zeros((len(position_table), dim))
-    
-    #Get the input-encoding and XOR-ing result:  
+
+    #Get the input-encoding and XOR-ing result: 
+    encoded_input = grayscale_table[img] #select the rows from grayscale_table that correspond to the elements of img
+    print("encoded_input dimension =",encoded_input.shape)
     for pixel in range(len(position_table)):
-        xor_result = (grayscale_table[pixel] ^ position_table[pixel])
+        xor_result = (encoded_input[pixel] ^ position_table[pixel])
         xor_result = (xor_result != 0).astype(int)
         xor_result[xor_result == 0] = -1
             
@@ -68,7 +70,8 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
         container[pixel, :] = hv*1
         
     img_hv = np.sum(container, axis = 0) #bundling without the cyclic step yet
-    return img_hv, container
+    print("img_hv dimension =",img_hv.shape)
+    return img_hv #,container
 
 
 # Train the HDC circuit on the training set : (Y_train, HDC_cont_train)
