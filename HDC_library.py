@@ -60,7 +60,6 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
 
     #Get the input-encoding and XOR-ing result: 
     encoded_input = grayscale_table[img] #select the rows from grayscale_table that correspond to the elements of img
-    print("encoded_input dimension =",encoded_input.shape)
     for pixel in range(len(position_table)):
         xor_result = (encoded_input[pixel] ^ position_table[pixel])
         xor_result = (xor_result != 0).astype(int)
@@ -70,7 +69,6 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
         container[pixel, :] = hv*1
         
     img_hv = np.sum(container, axis = 0) #bundling without the cyclic step yet
-    print("img_hv dimension =",img_hv.shape)
     return img_hv #,container
 
 
