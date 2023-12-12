@@ -220,7 +220,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
         Acc = compute_accuracy(HDC_cont_train_cyclic, Y_test, centroids_q, biases)
-        print(Acc)
+        # print(Acc)
         sparsity_HDC_centroid = np.array(centroids_q).flatten() 
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
         SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])
