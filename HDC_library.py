@@ -30,7 +30,7 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
         
         if class_idx == Y_test[i]:
             Acc += 1
-    print(Acc/Y_test.shape[0])        
+    #print(Acc/Y_test.shape[0])        
     return Acc/Y_test.shape[0]
 
 
@@ -39,18 +39,19 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
 # when mode == 1, all the probability of having +1 scales with an input "key" i.e., when the inputs to the HDC encoded are coded
 # on e.g., 8-bit, we have 256 possible keys
 def lookup_generate(dim, n_keys, mode = 1):
-    table = np.empty((0, dim)) 
-    if mode == 0:
-        for i in range(n_keys - 1):    
-            row =  np.random.choice([-1, 1], size=(dim), p=[0.5, 0.5])
-            table = np.vstack((table, row))
+    table = np.zeros((n_keys, dim)) 
+    prob_array = [0] * n_keys
+    if mode == 0:   
+        table =  np.random.choice([-1, 1], size=(n_keys,dim), p=[0.5, 0.5])
+        #table = np.vstack((table, row))
     else:
-        for i in range(n_keys - 1):
-            probability = i / (n_keys)
+        for i in range(n_keys):
+            probability = i / (n_keys-1)
             row =  np.random.choice([-1, 1], size=(dim), p=[1-probability, probability])
-            table = np.vstack((table, row))
+            np.vstack((table, row))
+            prob_array[i] = probability
 
-    return table.astype(np.int8)
+    return table.astype(np.int8),prob_array
 
 # dim is the HDC dimensionality D
 def encode_HDC_RFF(img, position_table, grayscale_table, dim):
@@ -67,7 +68,7 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
         container[pixel, :] = hv*1
         
     img_hv = np.sum(container, axis = 0) #bundling without the cyclic step yet
-    return img_hv
+    return img_hv, container
 
 
 # Train the HDC circuit on the training set : (Y_train, HDC_cont_train)
@@ -102,28 +103,23 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         L[1:N_train+1] = np.ones(N_train)
         
         #Solve the system of equations to get the vector alpha:     
-        alpha = np.zeros(N_train)
+        alpha = np.zeros(N_train+1)
         alpha = np.linalg.solve(Beta,L) #alpha here is the whole v vector from the slides
 
         # Get HDC prototype for class cla, still in floating point
-        final_HDC_centroid = np.zeros(np.shape(HDC_cont_train[0]))
-        final_HDC_centroid_q = np.zeros(np.shape(HDC_cont_train[0]))
+        final_HDC_centroid = np.zeros(100)
+        final_HDC_centroid_q = np.zeros(100)
 
         for i in range(N_train):
-            final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i]*HDC_cont_train[i] #this is mu(vector) from the slides
-        min_val = np.min(final_HDC_centroid)
-        max_val = np.max(final_HDC_centroid)
-        range_val = max_val - min_val
-        # Calculate the size of each quantization interval
-        interval_size = range_val / (2**D_b - 1)
-        # Quantize HDC prototype to D_b-bit 
-        final_HDC_centroid_q = np.round((final_HDC_centroid - min_val) / interval_size) * interval_size + min_val
-        #print(final_HDC_centroid_q)
+            final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i+1]*HDC_cont_train[i] #this is mu(vector) from the slides
+        
+        # Quantization
+        max_centroid = np.max(np.abs(final_HDC_centroid))
+        final_HDC_centroid_q = np.round(final_HDC_centroid*(2**(D_b-1)-1)/max_centroid)
             
 
         #Amplification factor for the LS-SVM bias
-        max = np.max(np.abs(final_HDC_centroid))
-        fact = (2**D_b-1)/max
+        fact = (2**(D_b-1)-1)/max_centroid
 
         if np.max(np.abs(final_HDC_centroid)) == 0:
             print("Kernel matrix badly conditionned! Ignoring...")
@@ -217,8 +213,8 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         Y_test = Y_test.astype(int)
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
-        Acc = compute_accuracy(HDC_cont_test_cyclic, Y_test, centroids_q, biases)
-        print(Acc)
+        Acc = compute_accuracy(HDC_cont_test_cyclic, Y_test, centroids_q, biases_q)
+        #print(Acc)
         sparsity_HDC_centroid = np.array(centroids_q).flatten() 
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
         SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])

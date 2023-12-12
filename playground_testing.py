@@ -7,24 +7,7 @@ from HDC_library import evaluate_F_of_x
 from HDC_library import encode_HDC_RFF
 from HDC_library import lookup_generate
 from sklearn.utils import shuffle
-np.set_printoptions(threshold=np.inf, linewidth=200)
-'''
-def lookup_generate(dim, n_keys, mode = 1):
-    table = np.empty((0, dim)) 
-    prob_array = [0] * n_keys
-    if mode == 0:
-        for i in range(n_keys):    
-            row =  np.random.choice([-1, 1], size=(dim), p=[0.5, 0.5])
-            table = np.vstack((table, row))
-    else:
-        for i in range(n_keys):
-            probability = i / (n_keys-1)
-            row =  np.random.choice([-1, 1], size=(dim), p=[1-probability, probability])
-            table = np.vstack((table, row))
-            prob_array[i] = probability
-
-    return table.astype(np.int8),prob_array
-'''
+#np.set_printoptions(threshold=np.inf, linewidth=200)
 
 
 def test_matrix_probability(LUT,in_p):
@@ -49,8 +32,9 @@ def test_matrix_probability(LUT,in_p):
     plt.show()
 
 
-#LUT,p_in = lookup_generate(1024,256,1)C
+#LUT,p_in = lookup_generate(1024,256,1)
 #test_matrix_probability(LUT,p_in)
+
 
 dim = 1024
 #position_table = lookup_generate(dim, len(position_table), 1)
@@ -60,24 +44,10 @@ mat = spio.loadmat('XOR_test_data.mat', squeeze_me=True)
 in1 = mat['in1'] # array
 in2 = mat['in2']
 desired = mat['result']
-'''
-def encode_HDC_RFF(img, position_table, grayscale_table, dim):
-    img_hv = np.zeros(dim, dtype=np.int16)
-    container = np.zeros((len(position_table), dim))
-    for pixel in range(len(position_table)):
-        #Get the input-encoding and XOR-ing result:  
-        xor_result = (grayscale_table[pixel] ^ position_table[pixel])
-        xor_result = (xor_result != 0).astype(int)
 
-        hv = xor_result
-        container[pixel, :] = hv*1
-        
-    img_hv = np.sum(container, axis = 0) #bundling without the cyclic step yet
-    return container
-'''
 
 def test_XOR(in1,in2,desired,dim):
-    calculated = encode_HDC_RFF([0], in1, in2, dim)
+    img_hv, calculated = encode_HDC_RFF([0], in1, in2, dim)
     print("desired =",desired)
     print("calculated =",calculated)
     if (desired == calculated).all():
@@ -87,18 +57,88 @@ def test_XOR(in1,in2,desired,dim):
 
 #test_XOR(in1,in2,desired,dim)
 
+# If testset = trainset, we should get 100% accuracy
+def test_evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt):
+    local_avg = np.zeros(Nbr_of_trials)
+    local_avgre = np.zeros(Nbr_of_trials)
+    local_sparse = np.zeros(Nbr_of_trials)
+
+    #Estimate F(x) over "Nbr_of_trials" trials
+    for trial_ in range(Nbr_of_trials): 
+        HDC_cont_all, LABELS = shuffle(HDC_cont_all, LABELS) # Shuffle dataset for random train-test split
+            
+        HDC_cont_train_ = HDC_cont_all[:N_train,:] # Take training set
+        HDC_cont_train_cpy = HDC_cont_train_ * 1
+        # Apply cyclic accumulation with biases and accumulation speed beta_
+        cyclic_accumulation_train = HDC_cont_train_cpy % (2 ** B_cnt)
+        HDC_cont_train_cyclic = np.zeros((cyclic_accumulation_train.shape[0],HDC_cont_all.shape[1]))
+       
+        for row in range(cyclic_accumulation_train.shape[0]):
+            cyclic_accumulation_train_vector = np.array(cyclic_accumulation_train[row])
+    
+            for i in range(len(cyclic_accumulation_train_vector)):
+                if cyclic_accumulation_train_vector[i] - pow(2,B_cnt-1) > alpha_sp:
+                    cyclic_accumulation_train_vector[i]  = 1
+                elif cyclic_accumulation_train_vector[i] - pow(2,B_cnt-1)< -alpha_sp:
+                    cyclic_accumulation_train_vector[i] = -1
+                elif abs(cyclic_accumulation_train_vector[i] - pow(2,B_cnt-1)) <= alpha_sp:
+                    cyclic_accumulation_train_vector[i] = 0
+
+            HDC_cont_train_cyclic[row] = cyclic_accumulation_train_vector
+
+        Y_train = LABELS[:N_train] - 1
+        Y_train = Y_train.astype(int)
+        
+        # Train the HDC system to find the prototype hypervectors, _q meqns quantized
+        centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train_cyclic, gamma, D_b)
+        
+        # Do the same encoding steps with the test set
+        HDC_cont_test_ = HDC_cont_train_ * 1
+        HDC_cont_test_cpy = HDC_cont_test_ * 1
+        
+        # Apply cyclic accumulation with biases and accumulation speed beta_
+        
+        cyclic_accumulation_test = HDC_cont_test_cpy % (2 ** B_cnt)
+        HDC_cont_test_cyclic = np.zeros((cyclic_accumulation_test.shape[0],HDC_cont_all.shape[1]))
+        for row in range(cyclic_accumulation_test.shape[0]):
+            cyclic_accumulation_test_vector = np.array(cyclic_accumulation_test[row])
+        
+            for i in range(len(cyclic_accumulation_test_vector)):
+                if cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1) > alpha_sp:
+                    cyclic_accumulation_test_vector[i] = 1
+                elif cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1) < -alpha_sp:
+                    cyclic_accumulation_test_vector[i] = -1
+                elif abs(cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1)) <= alpha_sp:
+                    cyclic_accumulation_test_vector[i] = 0
+            HDC_cont_test_cyclic[row] = cyclic_accumulation_test_vector
+        
+        Y_test = Y_train * 1
+        Y_test = Y_test.astype(int)
+        
+        # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
+        Acc = compute_accuracy(HDC_cont_test_cyclic, Y_test, centroids_q, biases_q)
+        print(Acc)
+        sparsity_HDC_centroid = np.array(centroids_q).flatten() 
+        nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
+        SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])
+        local_avg[trial_] = lambda_1 * Acc + lambda_2 * SPH #Cost F(x) is defined as 1 - this quantity
+        local_avgre[trial_] = Acc
+        local_sparse[trial_] = SPH
+        
+    return local_avg, local_avgre, local_sparse
+
 
 dataset_path = 'WISCONSIN/data.csv' 
 ##################################   
-imgsize_vector = 100 #Each input vector has 30 features
+imgsize_vector = 30 #Each input vector has 30 features
 n_class = 2
-D_b = 8 #We target 4-bit HDC prototypes
+D_b = 4 #We target 4-bit HDC prototypes
 B_cnt = 8
 maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
-D_HDC = 300 #HDC hypervector dimension
+D_HDC = 100 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
-Nbr_of_trials = 8 #Test accuracy averaged over Nbr_of_trials runs
-N_tradeof_points = 100 #Number of tradeoff points - use 100 
+Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs
+N_tradeof_points = 20 #Number of tradeoff points - use 100 
 N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
 #Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
@@ -123,11 +163,14 @@ N_train = int(X.shape[0]*portion)
 """
 #3) Generate HDC LUTs and bundle dataset
 """
-grayscale_table = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
-position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
+grayscale_table, prob_array1 = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
+position_table, prob_array2 = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
 HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors
 bias_ = 0 # -> INSERT YOUR CODE #generate the random biases once
 
+print("X dimension =",X.shape)
+print("position table =", np.shape(position_table))
+print("grayscale table =", np.shape(grayscale_table))
 for i in range(X.shape[0]):
     if i%100 == 0:
         print(str(i) + "/" + str(X.shape[0]))
@@ -191,7 +234,7 @@ for optimalpoint in range(N_tradeof_points):
         #    a) thresholding and encoding of bundled dataset into final HDC "ternary" vectors (-1, 0, +1)
         #    b) Training and testing the HDC system on "Nbr_of_trials" trials (with different random dataset splits)
         #    c) Returns lambda_1*Acc + lambda_2*Sparsity, Accuracy and Sparsity for each trials
-        local_avg, local_avgre, local_sparse = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
+        local_avg, local_avgre, local_sparse = test_evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
         F_of_x.append(1 - np.mean(local_avg)) #Append cost F(x)  
         Accs.append(np.mean(local_avgre))
         Sparsities.append(np.mean(local_sparse))
