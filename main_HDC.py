@@ -31,7 +31,7 @@ maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
 D_HDC = 100 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs
-N_tradeof_points = 3 #Number of tradeoff points - use 100 
+N_tradeof_points = 20 #Number of tradeoff points - use 100 
 N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
 #Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
@@ -45,8 +45,8 @@ path you have. Note, on Windows, you must put the "r" in r'C:etc..'
 DATASET = np.loadtxt(dataset_path, dtype = object, delimiter = ',', skiprows = 1)
 X = DATASET[:,2:].astype(float)
 LABELS = DATASET[:,1]
-LABELS[LABELS == 'M'] = 0
-LABELS[LABELS == 'B'] = 2
+LABELS[LABELS == 'M'] = -1
+LABELS[LABELS == 'B'] = 1
 LABELS = LABELS.astype(float)
 X = X.T / np.max(X, axis = 1)
 X, LABELS = shuffle(X.T, LABELS)
@@ -59,7 +59,8 @@ N_train = int(X.shape[0]*portion)
 grayscale_table = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
 position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
 HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors
-bias_ = 1 #generate the random biases once
+bias_ = np.random.uniform(0, 2*np.pi,size=(X.shape[0],D_HDC)) #generate the random biases once
+
 
 for i in range(X.shape[0]):
     if i%100 == 0:

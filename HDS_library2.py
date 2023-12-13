@@ -16,17 +16,17 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
             #compute LS-SVM response
             response = np.dot(np.transpose(final_HDC_centroid),received_HDC_vector) + biases[cl]
             #print("Responce before if: ", response)
-            # if response < 0:
-            #     response = -1
-            # else:
-            #     response = 1
+            if response < 0:
+                response = -1
+            else:
+                response = 1
             #print("Responce after if: ", response)
 
             all_resp[cl] = response
         class_idx = np.argmax(all_resp)
         
-        # if class_idx == 0:
-        #     class_idx = -1
+        if class_idx == 0:
+            class_idx = -1
         
         if class_idx == Y_test[i]:
             Acc += 1
@@ -50,7 +50,7 @@ def lookup_generate(dim, n_keys, mode = 1):
             table[i,:] = row
             prob_array[i] = probability
 
-    return table.astype(np.int8)#,prob_array
+    return table.astype(np.int8),prob_array
 
 # dim is the HDC dimensionality D
 def encode_HDC_RFF(img, position_table, grayscale_table, dim):
@@ -70,6 +70,8 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
         
     img_hv = np.sum(container, axis = 0) #bundling without the cyclic step yet
     return img_hv #,container
+
+
 # Train the HDC circuit on the training set : (Y_train, HDC_cont_train)
 # n_class: number of classes
 # N_train: number of data points in training set
@@ -102,25 +104,21 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         L[1:N_train+1] = np.ones(N_train)
         
         #Solve the system of equations to get the vector alpha:     
-        alpha = np.zeros(N_train)
+        alpha = np.zeros(N_train+1)
         alpha = np.linalg.solve(Beta,L) #alpha here is the whole v vector from the slides
 
         # Get HDC prototype for class cla, still in floating point
-        final_HDC_centroid = np.zeros(np.shape(HDC_cont_train[0]))
-        final_HDC_centroid_q = np.zeros(np.shape(HDC_cont_train[0]))
-        #print("final_HDC_centroid =",np.shape(final_HDC_centroid))
-        #print("Y_train = ", np.shape(Y_train))
-        #print("alpha = ", np.shape(alpha))
-        #print("HDC_cont_train = ",np.shape(HDC_cont_train[1]))
-        #print("phi: ",HDC_cont_train)
-        for i in range(N_train):
-            final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i]*HDC_cont_train[i] #this is mu(vector) from the slides
+        final_HDC_centroid = np.zeros(100)
+        final_HDC_centroid_q = np.zeros(100)
 
-        #print(final_HDC_centroid)
+        for i in range(N_train):
+            final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i+1]*HDC_cont_train[i] #this is mu(vector) from the slides
+        
         # Quantization
         max_centroid = np.max(np.abs(final_HDC_centroid))
         final_HDC_centroid_q = np.round(final_HDC_centroid*(2**(D_b-1)-1)/max_centroid)
-        
+            
+
         #Amplification factor for the LS-SVM bias
         fact = (2**(D_b-1)-1)/max_centroid
 
@@ -157,74 +155,52 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
             
         HDC_cont_train_ = HDC_cont_all[:N_train,:] # Take training set
         HDC_cont_train_cpy = HDC_cont_train_ * 1
-        
         bias_train = bias_[:N_train]
-        print(np.shape(bias_train))
-        print(np.shape(HDC_cont_train_ * beta_))
-        HDC_cont_train_cpy = HDC_cont_train_cpy*beta_ + bias_train[trial_]
         # Apply cyclic accumulation with biases and accumulation speed beta_
+        HDC_cont_train_cpy = HDC_cont_train_cpy*beta_ + bias_train
         cyclic_accumulation_train = HDC_cont_train_cpy % (2 ** B_cnt)
-        HDC_cont_train_cyclic = np.zeros((cyclic_accumulation_train.shape[0],HDC_cont_all.shape[1]))
-       
+       # Ternary thresholding with threshold alpha_sp:
         for row in range(cyclic_accumulation_train.shape[0]):
-            cyclic_accumulation_train_vector = np.array(cyclic_accumulation_train[row])
-    
-            for i in range(len(cyclic_accumulation_train_vector)):
-                if cyclic_accumulation_train_vector[i] - pow(2,B_cnt-1) > alpha_sp:
-                    cyclic_accumulation_train_vector[i]  = 1
-                elif cyclic_accumulation_train_vector[i] - pow(2,B_cnt-1)< -alpha_sp:
-                    cyclic_accumulation_train_vector[i] = -1
-                elif abs(cyclic_accumulation_train_vector[i] - pow(2,B_cnt-1)) <= alpha_sp:
-                    cyclic_accumulation_train_vector[i] = 0
+            for col in range(cyclic_accumulation_train.shape[1]):
+                if cyclic_accumulation_train[row,col] - pow(2,B_cnt-1) > alpha_sp:
+                    cyclic_accumulation_train[row,col]  = 1
+                elif cyclic_accumulation_train[row,col] - pow(2,B_cnt-1) < -alpha_sp:
+                    cyclic_accumulation_train[row,col] = -1
+                elif abs(cyclic_accumulation_train[row,col] - pow(2,B_cnt-1)) <= alpha_sp:
+                    cyclic_accumulation_train[row,col] = 0
 
-            HDC_cont_train_cyclic[row] = cyclic_accumulation_train_vector
-
-
-        
-        # Apply cyclic accumulation with biases and accumulation speed beta_
         Y_train = LABELS[:N_train] - 1
         Y_train = Y_train.astype(int)
         
         # Train the HDC system to find the prototype hypervectors, _q meqns quantized
-        centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train_cyclic, gamma, D_b)
+        centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, N_train, Y_train, cyclic_accumulation_train, gamma, D_b)
         
         # Do the same encoding steps with the test set
-        HDC_cont_test_ = HDC_cont_all[N_train:,:]
+        # put testset equal to training set for unit test 2, we want 100% accuracy
+        #HDC_cont_test_ = HDC_cont_all[N_train:,:]
+        HDC_cont_test_ = HDC_cont_train_*1
         HDC_cont_test_cpy = HDC_cont_test_ * 1
-        
-
-        #bias_test = np.array(bias_train)
+        #bias_test = bias_[N_train:]
+        bias_test = bias_train
         # Apply cyclic accumulation with biases and accumulation speed beta_
-        bias_test = bias_[N_train:]
-
-        print(np.shape(bias_test))
-        print(np.shape(HDC_cont_test_ * beta_))
-        HDC_cont_test_cpy = HDC_cont_test_cpy * beta_ + bias_test[trial_]
-        
+        HDC_cont_test_cpy = HDC_cont_test_cpy*beta_ + bias_test
         cyclic_accumulation_test = HDC_cont_test_cpy % (2 ** B_cnt)
-        HDC_cont_test_cyclic = np.zeros((cyclic_accumulation_test.shape[0],HDC_cont_all.shape[1]))
-        for row in range(cyclic_accumulation_test.shape[0]):
-            cyclic_accumulation_test_vector = np.array(cyclic_accumulation_test[row])
-        
-            for i in range(len(cyclic_accumulation_test_vector)):
-                if cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1) > alpha_sp:
-                    cyclic_accumulation_test_vector[i] = 1
-                elif cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1) < -alpha_sp:
-                    cyclic_accumulation_test_vector[i] = -1
-                elif abs(cyclic_accumulation_test_vector[i] - pow(2,B_cnt-1)) <= alpha_sp:
-                    cyclic_accumulation_test_vector[i] = 0
-            HDC_cont_test_cyclic[row] = cyclic_accumulation_test_vector
-
-
-
-        
         # Ternary thresholding with threshold alpha_sp:
-        
-        Y_test = LABELS[N_train:] 
+        for row in range(cyclic_accumulation_test.shape[0]):
+            for col in range(cyclic_accumulation_test.shape[1]):
+                if cyclic_accumulation_test[row,col] - pow(2,B_cnt-1) > alpha_sp:
+                    cyclic_accumulation_test[row,col] = 1
+                elif cyclic_accumulation_test[row,col] - pow(2,B_cnt-1) < -alpha_sp:
+                    cyclic_accumulation_test[row,col] = -1
+                elif abs(cyclic_accumulation_test[row,col] - pow(2,B_cnt-1)) <= alpha_sp:
+                    cyclic_accumulation_test[row,col] = 0
+
+        #Y_test = LABELS[N_train:] - 1
+        Y_test = Y_train*1
         Y_test = Y_test.astype(int)
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
-        Acc = compute_accuracy(HDC_cont_test_cyclic, Y_test, centroids, biases)
+        Acc = compute_accuracy(cyclic_accumulation_test, Y_test, centroids_q, biases_q)
         print(Acc)
         sparsity_HDC_centroid = np.array(centroids_q).flatten() 
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
