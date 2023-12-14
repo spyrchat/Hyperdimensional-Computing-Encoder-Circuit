@@ -7,7 +7,7 @@ from scipy.linalg import lu_factor, lu_solve
 
 def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
     Acc = 0
-    n_class = np.max(Y_test) + 1
+    n_class = int(np.max(Y_test) + 1)
     for i in range(Y_test.shape[0]): # Y_test.shape[0] = rows of Y_test = each patient
         received_HDC_vector = (HDC_cont_test[i])
         all_resp = np.zeros(n_class)
@@ -15,22 +15,17 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
             final_HDC_centroid = (centroids[cl])
             #compute LS-SVM response
             response = np.dot(np.transpose(final_HDC_centroid),received_HDC_vector) + biases[cl]
-            #print("Responce before if: ", response)
-            if response < 0:
-                response = -1
-            else:
-                response = 1
-            #print("Responce after if: ", response)
 
             all_resp[cl] = response
         class_idx = np.argmax(all_resp)
         
         if class_idx == 0:
+            class_idx = 1
+        else:
             class_idx = -1
         
         if class_idx == Y_test[i]:
-            Acc += 1
-    #print(Acc/Y_test.shape[0])        
+            Acc += 1      
     return Acc/Y_test.shape[0]
 
 
@@ -54,7 +49,7 @@ def lookup_generate(dim, n_keys, mode = 1):
 
 # dim is the HDC dimensionality D
 def encode_HDC_RFF(img, position_table, grayscale_table, dim):
-    #img containts the 30 features of the current patient
+    #img contains the 30 features of the current patient
     img_hv = np.zeros(dim, dtype=np.int16)
     container = np.zeros((len(position_table), dim))
 
@@ -106,6 +101,9 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         #Solve the system of equations to get the vector alpha:     
         alpha = np.zeros(N_train+1)
         alpha = np.linalg.solve(Beta,L) #alpha here is the whole v vector from the slides
+        print("beta =",Beta)
+        #print("L =",L)
+        print("alpha =",alpha)
 
         # Get HDC prototype for class cla, still in floating point
         final_HDC_centroid = np.zeros(100)
@@ -169,7 +167,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
                 elif abs(cyclic_accumulation_train[row,col] - pow(2,B_cnt-1)) <= alpha_sp:
                     cyclic_accumulation_train[row,col] = 0
 
-        Y_train = LABELS[:N_train] - 1
+        Y_train = (LABELS[:N_train] - 1)*2-1
         Y_train = Y_train.astype(int)
         
         # Train the HDC system to find the prototype hypervectors, _q meqns quantized

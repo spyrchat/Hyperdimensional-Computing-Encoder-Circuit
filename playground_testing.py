@@ -44,9 +44,10 @@ in1 = mat['in1'] # array
 in2 = mat['in2']
 desired = mat['result']
 
-
+# TO DO
 def test_XOR(in1,in2,desired,dim):
-    img_hv, calculated = encode_HDC_RFF([0], in1, in2, dim)
+    img = np.random.randint(0, 256, size=30)
+    img_hv, calculated = encode_HDC_RFF(img, in1, in2, dim)
     print("desired =",desired)
     print("calculated =",calculated)
     if (desired == calculated).all():
@@ -56,6 +57,21 @@ def test_XOR(in1,in2,desired,dim):
 
 #test_XOR(in1,in2,desired,dim)
 
+def test_train():
+    n_class = 2
+    N_train = 360
+    gamma = 0.0002
+    D_b = 4
+    Y_train_init = np.concatenate((np.ones(N_train),np.ones(N_train)*(-1)))
+    HDC_cont_train = np.concatenate((np.ones((N_train,100)),np.ones((N_train,100))*(-1)))
+    centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, 2*N_train, Y_train_init, HDC_cont_train, gamma, D_b)
+    print("centroids =",centroids)
+    print("biases =",biases)
+    Acc = compute_accuracy(HDC_cont_train, Y_train_init, centroids_q, biases_q)
+    return Acc
+
+#Acc = test_train()
+#print("Acc =",Acc)
 # If testset = trainset, we should get 100% accuracy
 
 
@@ -67,7 +83,7 @@ D_b = 4 #We target 4-bit HDC prototypes
 B_cnt = 8
 maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
 D_HDC = 100 #HDC hypervector dimension
-portion = 0.8 #We choose 60%-40% split between train and test sets
+portion = 0.6 #We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs
 N_tradeof_points = 20 #Number of tradeoff points - use 100 
 N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
@@ -83,7 +99,7 @@ N_tradeof_points = lambda_sp.shape[0]
 DATASET = np.loadtxt(dataset_path, dtype = object, delimiter = ',', skiprows = 1)
 X = DATASET[:,2:].astype(float)
 LABELS = DATASET[:,1]
-LABELS[LABELS == 'M'] = 0
+LABELS[LABELS == 'M'] = 1
 LABELS[LABELS == 'B'] = 2
 LABELS = LABELS.astype(float)
 X = X.T / np.max(X, axis = 1)
