@@ -78,7 +78,7 @@ NM_iter = 350 #Maximum number of iterations
 STD_EPS = 0.002 #Threshold for early-stopping on standard deviation of the Simplex
 #Contraction, expansion,... coefficients:
 alpha_simp = 1 * 0.5
-gamma_simp = 2 * 0.6
+gamma_simp = 2 
 rho_simp = 0.5
 sigma_simp = 0.5
 ################################## 
@@ -142,35 +142,33 @@ for optimalpoint in range(N_tradeof_points):
     
     # For the details about the Nelder-Mead step, please refer to the course notes / reference, we are simply implementing that
     for iter_ in range(NM_iter):
-
+        # print("lambda 2", lambda_2)
         STD_.append(np.std(F_of_x))
         if np.std(F_of_x) < STD_EPS and 100 < iter_:
             break #Early-stopping criteria
         
         #1) sort Accs, Sparsities, F_of_x, Simplex, add best objective to array "objective_"
-        
+    
         sorted_indices = np.argsort(F_of_x)
         F_of_x = F_of_x[sorted_indices]
         Accs = Accs[sorted_indices]
         Sparsities = Sparsities[sorted_indices]
         Simplex = Simplex[sorted_indices, :]
-
+     
         best_objective_value = F_of_x[0]
         objective_.append(best_objective_value)
         
         #2) average simplex x_0 
         
         x_0 = np.mean(Simplex[:-1, :], axis=0)
-        
         #3) Reflexion x_r
-        
         x_r = x_0 + alpha_simp * (x_0 - Simplex[-1,:])
         
         
         #Evaluate cost of reflected point x_r
         F_curr, acc_curr, sparse_curr = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_r[2], bias_, x_r[0], x_r[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
         F_curr = 1 - np.mean(F_curr)
-        if F_curr < best_objective_value and F_curr >= F_of_x[-2]:
+        if F_curr >= best_objective_value and F_curr < F_of_x[-2]:
             F_of_x[-1] = F_curr
             Simplex[-1,:] = x_r
             Accs[-1] = acc_curr
@@ -227,6 +225,8 @@ for optimalpoint in range(N_tradeof_points):
                         F_of_x[rep] = 1 - np.mean(F_shrink)
                         Accs[rep] = np.mean(acc_shrink)
                         Sparsities[rep] = np.mean(sparse_shrink)
+        print("Accuracy :",Accs[0])
+        print("Sparsity :",Sparsities[0])    
     
     ################################## 
     #At the end of the Nelder-Mead search and training, save Accuracy and Sparsity of the best cost F(x) into the ACCS and SPARSES arrays
