@@ -45,9 +45,20 @@ for iter_ in range(NM_iter):
         F_xe = evaluate_F_of_x_2(x_e[0], x_e[1])
         Simplex[-1] = x_e if F_xe < F_xr else x_r
     else:
-        x_c = x_0 + rho_simp * (Simplex[-1] - x_0)
-        F_xc = evaluate_F_of_x_2(x_c[0], x_c[1])
-        if F_xc < F_of_x[-1]:
+        flag = False
+        if F_xr < F_of_x[-1]:
+            x_c = x_0 + rho_simp * (Simplex[-1] - x_0)
+            F_c = evaluate_F_of_x_2(x_c[0], x_c[1])
+            if F_c < F_xr:
+                flag = True
+        elif F_xr >= F_of_x[-1]:
+            x_c = x_0 + rho_simp * (F_of_x[-1] - x_0)
+            F_c = evaluate_F_of_x_2(x_c[0],x_c[1])
+            if F_c < F_of_x[-1]:
+                flag = True
+            
+        if flag:
+            F_of_x = F_c
             Simplex[-1] = x_c
         else:
             for i in range(1, len(Simplex)):
