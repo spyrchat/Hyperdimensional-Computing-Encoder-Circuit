@@ -9,6 +9,7 @@ from HDC_library import lookup_generate
 from sklearn.utils import shuffle
 #np.set_printoptions(threshold=np.inf, linewidth=200)
 
+# UNIT TEST 1
 
 def test_matrix_probability(LUT,in_p):
     rows = len(LUT)
@@ -31,23 +32,21 @@ def test_matrix_probability(LUT,in_p):
     plt.show()
 
 
-#LUT,p_in = lookup_generate(1024,256,1)
+#LUT,p_in = lookup_generate(100,256,1)
 #test_matrix_probability(LUT,p_in)
 
 
-dim = 1024
-#position_table = lookup_generate(dim, len(position_table), 1)
-#grayscale_table = lookup_generate(dim, len(position_table), 0)
 mat = spio.loadmat('XOR_test_data.mat', squeeze_me=True)
 
 in1 = mat['in1'] # array
 in2 = mat['in2']
 desired = mat['result']
 
-# TO DO
-def test_XOR(in1,in2,desired,dim):
-    img = np.random.randint(0, 256, size=30)
-    img_hv, calculated = encode_HDC_RFF(img, in1, in2, dim)
+def test_XOR(in1,in2,desired):
+    #img = np.random.randint(0, 256, size=30)
+    #img_hv, calculated = encode_HDC_RFF(img, in1, in2, dim)
+    calculated = (in1 ^ in2)
+    calculated = (calculated != 0).astype(int)
     print("desired =",desired)
     print("calculated =",calculated)
     if (desired == calculated).all():
@@ -57,6 +56,22 @@ def test_XOR(in1,in2,desired,dim):
 
 #test_XOR(in1,in2,desired,dim)
 
+def test_encode_HDC_RFF():
+    #make synthetic test data
+    img = np.array([1, 2, 3]) 
+    position_table = np.array([[1,1,1],[1,1,1],[-1,-1,-1]])  
+    grayscale_table = np.ones((5, 3),dtype=np.int8)
+    grayscale_table[1::2, :] = -1 #alternate rows of 1s and -1s
+    dim = 3 
+    #[[1 1 1][1 1 1][-1 -1 -1]] XOR [[-1 -1 -1][1 1 1][-1 -1 -1]] = [[1 1 1][0 0 0][0 0 0]]
+    #we replace the zeros with -1. Using these testdata we tested all possible xor combinations.
+    result,container = encode_HDC_RFF(img, position_table, grayscale_table, dim)
+    print("result =",container)
+
+#test_encode_HDC_RFF()
+
+# UNIT TEST 2
+
 def test_train():
     n_class = 2
     N_train = 360
@@ -65,14 +80,14 @@ def test_train():
     Y_train_init = np.concatenate((np.ones(N_train),np.ones(N_train)*(-1)))
     HDC_cont_train = np.concatenate((np.ones((N_train,100)),np.ones((N_train,100))*(-1)))
     centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, 2*N_train, Y_train_init, HDC_cont_train, gamma, D_b)
-    print("centroids =",centroids)
-    print("biases =",biases)
+    #print("centroids =",centroids)
+    #print("biases =",biases)
     Acc = compute_accuracy(HDC_cont_train, Y_train_init, centroids_q, biases_q)
     return Acc
 
 #Acc = test_train()
 #print("Acc =",Acc)
-# If testset = trainset, we should get 100% accuracy
+# If testset = trainset, we should get very high accuracy
 
 
 dataset_path = 'WISCONSIN/data.csv' 
@@ -85,7 +100,7 @@ maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
 D_HDC = 100 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs
-N_tradeof_points = 20 #Number of tradeoff points - use 100 
+N_tradeof_points = 40 #Number of tradeoff points - use 100 
 N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
 #Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
@@ -110,14 +125,11 @@ N_train = int(X.shape[0]*portion)
 """
 #3) Generate HDC LUTs and bundle dataset
 """
-grayscale_table, prob_array1 = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
-position_table, prob_array2 = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
+grayscale_table = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
+position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
 HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors
 bias_ = np.random.uniform(0, 2*np.pi,size=(X.shape[0],D_HDC)) # -> INSERT YOUR CODE #generate the random biases once, [0,2*pi[ uniform
 
-print("X dimension =",X.shape)
-print("position table =", np.shape(position_table))
-print("grayscale table =", np.shape(grayscale_table))
 for i in range(X.shape[0]): # for every patient
     if i%100 == 0:
         print(str(i) + "/" + str(X.shape[0]))

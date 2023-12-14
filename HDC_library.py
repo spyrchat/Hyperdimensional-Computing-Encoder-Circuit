@@ -45,7 +45,7 @@ def lookup_generate(dim, n_keys, mode = 1):
             table[i,:] = row
             prob_array[i] = probability
 
-    return table.astype(np.int8),prob_array
+    return table.astype(np.int8)#,prob_array
 
 # dim is the HDC dimensionality D
 def encode_HDC_RFF(img, position_table, grayscale_table, dim):
@@ -59,7 +59,7 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
         xor_result = (encoded_input[pixel] ^ position_table[pixel])
         xor_result = (xor_result != 0).astype(int)
         xor_result[xor_result == 0] = -1
-            
+
         hv = xor_result
         container[pixel, :] = hv*1
         
@@ -101,9 +101,9 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         #Solve the system of equations to get the vector alpha:     
         alpha = np.zeros(N_train+1)
         alpha = np.linalg.solve(Beta,L) #alpha here is the whole v vector from the slides
-        print("beta =",Beta)
+        #print("beta =",Beta)
         #print("L =",L)
-        print("alpha =",alpha)
+        #print("alpha =",alpha)
 
         # Get HDC prototype for class cla, still in floating point
         final_HDC_centroid = np.zeros(100)
@@ -175,11 +175,11 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         
         # Do the same encoding steps with the test set
         # put testset equal to training set for unit test 2, we want 100% accuracy
-        #HDC_cont_test_ = HDC_cont_all[N_train:,:]
-        HDC_cont_test_ = HDC_cont_train_*1
+        HDC_cont_test_ = HDC_cont_all[N_train:,:]
+        #HDC_cont_test_ = HDC_cont_train_*1
         HDC_cont_test_cpy = HDC_cont_test_ * 1
-        #bias_test = bias_[N_train:]
-        bias_test = bias_train
+        bias_test = bias_[N_train:]
+        #bias_test = bias_train
         # Apply cyclic accumulation with biases and accumulation speed beta_
         HDC_cont_test_cpy = HDC_cont_test_cpy*beta_ + bias_test
         cyclic_accumulation_test = HDC_cont_test_cpy % (2 ** B_cnt)
@@ -193,8 +193,8 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
                 elif abs(cyclic_accumulation_test[row,col] - pow(2,B_cnt-1)) <= alpha_sp:
                     cyclic_accumulation_test[row,col] = 0
 
-        #Y_test = LABELS[N_train:] - 1
-        Y_test = Y_train*1
+        Y_test = LABELS[N_train:] - 1
+        #Y_test = Y_train*1
         Y_test = Y_test.astype(int)
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
