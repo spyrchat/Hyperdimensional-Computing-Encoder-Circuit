@@ -45,8 +45,8 @@ path you have. Note, on Windows, you must put the "r" in r'C:etc..'
 DATASET = np.loadtxt(dataset_path, dtype = object, delimiter = ',', skiprows = 1)
 X = DATASET[:,2:].astype(float)
 LABELS = DATASET[:,1]
-LABELS[LABELS == 'M'] = -1
-LABELS[LABELS == 'B'] = 1
+LABELS[LABELS == 'M'] = 1
+LABELS[LABELS == 'B'] = 2
 LABELS = LABELS.astype(float)
 X = X.T / np.max(X, axis = 1)
 X, LABELS = shuffle(X.T, LABELS)
@@ -61,7 +61,7 @@ position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XO
 HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors
 bias_ = np.random.uniform(0, 2*np.pi,size=(X.shape[0],D_HDC)) #generate the random biases once
 
-
+print("grayscale size", np.shape(grayscale_table))
 for i in range(X.shape[0]):
     if i%100 == 0:
         print(str(i) + "/" + str(X.shape[0]))

@@ -7,7 +7,7 @@ from scipy.linalg import lu_factor, lu_solve
 
 def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
     Acc = 0
-    n_class = np.max(Y_test) + 1
+    n_class = int(np.max(Y_test)) + 1
     for i in range(Y_test.shape[0]): # Y_test.shape[0] = rows of Y_test = each patient
         received_HDC_vector = (HDC_cont_test[i])
         all_resp = np.zeros(n_class)
@@ -25,8 +25,10 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
             all_resp[cl] = response
         class_idx = np.argmax(all_resp)
         
-        # if class_idx == 0:
-        #     class_idx = -1
+        if class_idx == 0:
+            class_idx = 1
+        else:
+            class_idx = -1        
         
         if class_idx == Y_test[i]:
             Acc += 1
@@ -49,12 +51,16 @@ def lookup_generate(dim, n_keys, mode = 1):
             row =  np.random.choice([-1, 1], size=(dim), p=[1-probability, probability])
             table[i,:] = row
             prob_array[i] = probability
-
+    # print("L:", table.astype(np.int8))
+    # print("L :",np.shape(table.astype(np.int8)))
     return table.astype(np.int8)#,prob_array
 
 # dim is the HDC dimensionality D
 def encode_HDC_RFF(img, position_table, grayscale_table, dim):
     #img containts the 30 features of the current patient
+    
+    # print("Features Shape", np.shape(img))
+    # print("geryscale_table size", np.shape(grayscale_table))
     img_hv = np.zeros(dim, dtype=np.int16)
     container = np.zeros((len(position_table), dim))
 
@@ -69,13 +75,18 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
         container[pixel, :] = hv*1
         
     img_hv = np.sum(container, axis = 0) #bundling without the cyclic step yet
-    return img_hv #,container
+    # print("img_hv:",img_hv)
+    # print("Container: ", container)
+    # print("Shape of the container:",np.shape(container))
+    return img_hv
 # Train the HDC circuit on the training set : (Y_train, HDC_cont_train)
 # n_class: number of classes
 # N_train: number of data points in training set
 # gamma: LS-SVM regularization
 # D_b: number of bit for HDC prototype quantization-2
 def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
+    # print("HDC_cont_train", HDC_cont_train)
+    # print(np.shape(HDC_cont_train))
     centroids = []
     centroids_q = []
     biases_q = []
@@ -157,10 +168,11 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
             
         HDC_cont_train_ = HDC_cont_all[:N_train,:] # Take training set
         HDC_cont_train_cpy = HDC_cont_train_ * 1
-        
+        # print("HDC_cont_train :",HDC_cont_train_)
+        # print("HDC_cont_train_shape", np.shape(HDC_cont_train_))
         bias_train = bias_[:N_train]
-        print(np.shape(bias_train))
-        print(np.shape(HDC_cont_train_ * beta_))
+        # print(np.shape(bias_train))
+        # print(np.shape(HDC_cont_train_ * beta_))
         HDC_cont_train_cpy = HDC_cont_train_cpy*beta_ + bias_train[trial_]
         # Apply cyclic accumulation with biases and accumulation speed beta_
         cyclic_accumulation_train = HDC_cont_train_cpy % (2 ** B_cnt)
@@ -182,9 +194,9 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
 
         
         # Apply cyclic accumulation with biases and accumulation speed beta_
-        Y_train = LABELS[:N_train] - 1
+        Y_train = (LABELS[:N_train] - 1)*2-1 
         Y_train = Y_train.astype(int)
-        
+
         # Train the HDC system to find the prototype hypervectors, _q meqns quantized
         centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, N_train, Y_train, HDC_cont_train_cyclic, gamma, D_b)
         
@@ -195,10 +207,8 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
 
         #bias_test = np.array(bias_train)
         # Apply cyclic accumulation with biases and accumulation speed beta_
-        bias_test = bias_[N_train:]
+        bias_test = bias_[N_train:] - 1
 
-        print(np.shape(bias_test))
-        print(np.shape(HDC_cont_test_ * beta_))
         HDC_cont_test_cpy = HDC_cont_test_cpy * beta_ + bias_test[trial_]
         
         cyclic_accumulation_test = HDC_cont_test_cpy % (2 ** B_cnt)
@@ -220,7 +230,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         
         # Ternary thresholding with threshold alpha_sp:
         
-        Y_test = LABELS[N_train:] 
+        Y_test = (LABELS[N_train:] - 1)*2-1 
         Y_test = Y_test.astype(int)
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
