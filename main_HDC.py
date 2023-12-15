@@ -168,7 +168,7 @@ for optimalpoint in range(N_tradeof_points):
         #Evaluate cost of reflected point x_r
         F_curr, acc_curr, sparse_curr = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_r[2], bias_, x_r[0], x_r[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
         F_curr = 1 - np.mean(F_curr)
-        if F_curr >= best_objective_value and F_curr < F_of_x[-2]:
+        if F_of_x[0] <= F_curr < F_of_x[-2]:
             F_of_x[-1] = F_curr
             Simplex[-1,:] = x_r
             Accs[-1] = acc_curr

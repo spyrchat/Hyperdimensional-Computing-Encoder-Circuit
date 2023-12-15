@@ -40,10 +40,17 @@ for iter_ in range(NM_iter):
 
     if F_of_x[0] <= F_xr < F_of_x[-2]:
         Simplex[-1] = x_r
-    elif F_xr < F_of_x[0]:
+        F_of_x[-1] = F_xr
+    elif F_xr < best_objective_value:
         x_e = x_0 + gamma_simp * (x_r - x_0)
         F_xe = evaluate_F_of_x_2(x_e[0], x_e[1])
-        Simplex[-1] = x_e if F_xe < F_xr else x_r
+        if F_xe < F_xr :
+            Simplex[-1] = x_e
+            F_of_x[-1] = F_xe
+        else:
+            F_of_x[-1] = F_xr
+            Simplex[-1] = x_r
+
     else:
         flag = False
         if F_xr < F_of_x[-1]:
@@ -58,12 +65,13 @@ for iter_ in range(NM_iter):
                 flag = True
             
         if flag:
-            F_of_x = F_c
-            Simplex[-1] = x_c
+            F_of_x[-1] = F_c  
+            Simplex[-1,:] = x_c
         else:
             for i in range(1, len(Simplex)):
-                Simplex[i] = Simplex[0] + sigma_simp * (Simplex[i] - Simplex[0])
-
+                Simplex[i,:] = Simplex[1,:] + sigma_simp * (Simplex[i,:] - Simplex[1,:])
+                F_shrink = evaluate_F_of_x_2(Simplex[i,0],Simplex[i,1])
+                F_of_x[i] = F_shrink
 print("Final Simplex:", Simplex)
 print("Best Objective:", best_objective_value)
 
