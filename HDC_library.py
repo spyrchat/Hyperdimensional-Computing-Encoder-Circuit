@@ -205,4 +205,4 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         local_avgre[trial_] = Acc
         local_sparse[trial_] = SPH
         
-    return local_avg, local_avgre, local_sparsegit config pull.rebase false
+    return local_avg, local_avgre, local_sparse
