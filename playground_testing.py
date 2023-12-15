@@ -7,29 +7,12 @@ from HDC_library import evaluate_F_of_x
 from HDC_library import encode_HDC_RFF
 from HDC_library import lookup_generate
 from sklearn.utils import shuffle
-np.set_printoptions(threshold=np.inf, linewidth=200)
-'''
-def lookup_generate(dim, n_keys, mode = 1):
-    table = np.empty((0, dim)) 
-    prob_array = [0] * n_keys
-    if mode == 0:
-        for i in range(n_keys):    
-            row =  np.random.choice([-1, 1], size=(dim), p=[0.5, 0.5])
-            table = np.vstack((table, row))
-    else:
-        for i in range(n_keys):
-            probability = i / (n_keys-1)
-            row =  np.random.choice([-1, 1], size=(dim), p=[1-probability, probability])
-            table = np.vstack((table, row))
-            prob_array[i] = probability
+#np.set_printoptions(threshold=np.inf, linewidth=200)
 
-    return table.astype(np.int8),prob_array
-'''
-
+# UNIT TEST 1
 
 def test_matrix_probability(LUT,in_p):
     rows = len(LUT)
-    print(rows)
     cols = len(LUT[0])
     cntr_plus1 = [0] * rows
     cntr_minus1 = [0] * rows
@@ -49,35 +32,21 @@ def test_matrix_probability(LUT,in_p):
     plt.show()
 
 
-#LUT,p_in = lookup_generate(1024,256,1)C
+#LUT,p_in = lookup_generate(100,256,1)
 #test_matrix_probability(LUT,p_in)
 
-dim = 1024
-#position_table = lookup_generate(dim, len(position_table), 1)
-#grayscale_table = lookup_generate(dim, len(position_table), 0)
+
 mat = spio.loadmat('XOR_test_data.mat', squeeze_me=True)
 
 in1 = mat['in1'] # array
 in2 = mat['in2']
 desired = mat['result']
-'''
-def encode_HDC_RFF(img, position_table, grayscale_table, dim):
-    img_hv = np.zeros(dim, dtype=np.int16)
-    container = np.zeros((len(position_table), dim))
-    for pixel in range(len(position_table)):
-        #Get the input-encoding and XOR-ing result:  
-        xor_result = (grayscale_table[pixel] ^ position_table[pixel])
-        xor_result = (xor_result != 0).astype(int)
 
-        hv = xor_result
-        container[pixel, :] = hv*1
-        
-    img_hv = np.sum(container, axis = 0) #bundling without the cyclic step yet
-    return container
-'''
-
-def test_XOR(in1,in2,desired,dim):
-    calculated = encode_HDC_RFF([0], in1, in2, dim)
+def test_XOR(in1,in2,desired):
+    #img = np.random.randint(0, 256, size=30)
+    #img_hv, calculated = encode_HDC_RFF(img, in1, in2, dim)
+    calculated = (in1 ^ in2)
+    calculated = (calculated != 0).astype(int)
     print("desired =",desired)
     print("calculated =",calculated)
     if (desired == calculated).all():
@@ -87,18 +56,51 @@ def test_XOR(in1,in2,desired,dim):
 
 #test_XOR(in1,in2,desired,dim)
 
+def test_encode_HDC_RFF():
+    #make synthetic test data
+    img = np.array([1, 2, 3]) 
+    position_table = np.array([[1,1,1],[1,1,1],[-1,-1,-1]])  
+    grayscale_table = np.ones((5, 3),dtype=np.int8)
+    grayscale_table[1::2, :] = -1 #alternate rows of 1s and -1s
+    dim = 3 
+    #[[1 1 1][1 1 1][-1 -1 -1]] XOR [[-1 -1 -1][1 1 1][-1 -1 -1]] = [[1 1 1][0 0 0][0 0 0]]
+    #we replace the zeros with -1. Using these testdata we tested all possible xor combinations.
+    result,container = encode_HDC_RFF(img, position_table, grayscale_table, dim)
+    print("result =",container)
+
+#test_encode_HDC_RFF()
+
+# UNIT TEST 2
+
+def test_train():
+    n_class = 2
+    N_train = 360
+    gamma = 0.0002
+    D_b = 4
+    Y_train_init = np.concatenate((np.ones(N_train),np.ones(N_train)*(-1)))
+    HDC_cont_train = np.concatenate((np.ones((N_train,100)),np.ones((N_train,100))*(-1)))
+    centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, 2*N_train, Y_train_init, HDC_cont_train, gamma, D_b)
+    #print("centroids =",centroids)
+    #print("biases =",biases)
+    Acc = compute_accuracy(HDC_cont_train, Y_train_init, centroids_q, biases_q)
+    return Acc
+
+#Acc = test_train()
+#print("Acc =",Acc)
+# If testset = trainset, we should get very high accuracy
+
 
 dataset_path = 'WISCONSIN/data.csv' 
 ##################################   
-imgsize_vector = 100 #Each input vector has 30 features
+imgsize_vector = 30 #Each input vector has 30 features
 n_class = 2
-D_b = 8 #We target 4-bit HDC prototypes
+D_b = 4 #We target 4-bit HDC prototypes
 B_cnt = 8
 maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
-D_HDC = 300 #HDC hypervector dimension
+D_HDC = 100 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
-Nbr_of_trials = 8 #Test accuracy averaged over Nbr_of_trials runs
-N_tradeof_points = 100 #Number of tradeoff points - use 100 
+Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs
+N_tradeof_points = 40 #Number of tradeoff points - use 100 
 N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
 #Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
@@ -112,7 +114,7 @@ N_tradeof_points = lambda_sp.shape[0]
 DATASET = np.loadtxt(dataset_path, dtype = object, delimiter = ',', skiprows = 1)
 X = DATASET[:,2:].astype(float)
 LABELS = DATASET[:,1]
-LABELS[LABELS == 'M'] = 0
+LABELS[LABELS == 'M'] = 1
 LABELS[LABELS == 'B'] = 2
 LABELS = LABELS.astype(float)
 X = X.T / np.max(X, axis = 1)
@@ -126,9 +128,9 @@ N_train = int(X.shape[0]*portion)
 grayscale_table = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
 position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
 HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors
-bias_ = 0 # -> INSERT YOUR CODE #generate the random biases once
+bias_ = np.random.uniform(0, 2*np.pi,size=(X.shape[0],D_HDC)) # -> INSERT YOUR CODE #generate the random biases once, [0,2*pi[ uniform
 
-for i in range(X.shape[0]):
+for i in range(X.shape[0]): # for every patient
     if i%100 == 0:
         print(str(i) + "/" + str(X.shape[0]))
     HDC_cont_all[i,:] = encode_HDC_RFF(np.round((maxval - 1) * X[i,:]).astype(int), position_table, grayscale_table, D_HDC)
@@ -138,17 +140,6 @@ print("HDC bundling finished...")
 """
 #4) Nelder-Mead circuit optimization and HDC training
 """
-################################## 
-#Nelder-Mead parameters
-NM_iter = 350 #Maximum number of iterations
-STD_EPS = 0.002 #Threshold for early-stopping on standard deviation of the Simplex
-#Contraction, expansion,... coefficients:
-alpha_simp = 1 * 0.5
-gamma_simp = 2 * 0.6
-rho_simp = 0.5
-sigma_simp = 0.5
-################################## 
-
 ACCS = np.zeros(N_tradeof_points)
 SPARSES = np.zeros(N_tradeof_points)
 load_simplex = True # Keep it to true in order to have somewhat predictive results
@@ -167,7 +158,7 @@ for optimalpoint in range(N_tradeof_points):
             gam_exp = np.random.uniform(-5, -1)
             beta_ = np.random.uniform(0, 2) * (2**B_cnt-1)/imgsize_vector
             gamma = 10**gam_exp
-            simp_arr = np.array([gamma, alpha_sp, beta_])
+            simp_arr = np.array([gamma, alpha_sp, beta_]) #beta_ is sigma in the slides (slide 21)
             Simplex.append(simp_arr*1)  
             
         #np.savez("Simplex2.npz", data = Simplex)
