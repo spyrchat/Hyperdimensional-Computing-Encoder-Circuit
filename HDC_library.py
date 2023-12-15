@@ -99,11 +99,11 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         #Beta.alpha = L -> alpha (that we want) 
         Beta = np.zeros((N_train+1, N_train+1)) #LS-SVM regression matrix
         omega = np.zeros((N_train, N_train))
-        #Fill Beta:
-        for i in range(N_train):
-            for j in range(N_train):
-                omega[i, j] = Y_train[i] * Y_train[j] * np.dot(np.transpose(HDC_cont_train[i]), HDC_cont_train[j])
         
+        Y_train_outer = np.outer(Y_train, Y_train)  # Outer product of Y_train
+        HDC_dot_products = np.dot(HDC_cont_train, HDC_cont_train.T)  # Dot product of HDC_cont_train vectors
+        omega = Y_train_outer * HDC_dot_products  # Element-wise multiplication
+
         Beta[1:N_train+1,0] = Y_train
         Beta[0,1:N_train+1] = np.transpose(Y_train)
         Beta[1:N_train+1,1:N_train+1] = omega + pow(gamma,-1) * np.identity(N_train)
@@ -119,14 +119,9 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         # Get HDC prototype for class cla, still in floating point
         final_HDC_centroid = np.zeros(np.shape(HDC_cont_train[0]))
         final_HDC_centroid_q = np.zeros(np.shape(HDC_cont_train[0]))
-        #print("final_HDC_centroid =",np.shape(final_HDC_centroid))
-        #print("Y_train = ", np.shape(Y_train))
-        #print("alpha = ", np.shape(alpha))
-        #print("HDC_cont_train = ",np.shape(HDC_cont_train[1]))
-        #print("phi: ",HDC_cont_train)
+
         for i in range(N_train):
             final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i]*HDC_cont_train[i] #this is mu(vector) from the slides
-
         #print(final_HDC_centroid)
         # Quantization
         max_centroid = np.max(np.abs(final_HDC_centroid))
