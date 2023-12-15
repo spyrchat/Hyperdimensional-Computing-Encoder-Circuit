@@ -31,8 +31,8 @@ maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
 D_HDC = 100 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs
-N_tradeof_points = 40 #Number of tradeoff points - use 100 
-N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
+N_tradeof_points = 100 #Number of tradeoff points - use 100 
+N_fine = int(N_tradeof_points*0.3) #Number of tradeoff points in the "fine-grain" region - use 30
 #Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
 lambda_sp = np.concatenate((lambda_fine, np.linspace(-1, -0.2, N_fine//2), np.linspace(0.2, 1, N_fine//2)))
