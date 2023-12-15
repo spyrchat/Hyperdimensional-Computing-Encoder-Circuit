@@ -115,7 +115,6 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         # Quantization
         max_centroid = np.max(np.abs(final_HDC_centroid))
         final_HDC_centroid_q = np.round(final_HDC_centroid*(2**(D_b-1)-1)/max_centroid)
-            
 
         #Amplification factor for the LS-SVM bias
         fact = (2**(D_b-1)-1)/max_centroid
@@ -193,13 +192,12 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
                 elif abs(cyclic_accumulation_test[row,col] - pow(2,B_cnt-1)) <= alpha_sp:
                     cyclic_accumulation_test[row,col] = 0
 
-        Y_test = LABELS[N_train:] - 1
+        Y_test = (LABELS[N_train:] - 1)*2-1
         #Y_test = Y_train*1
         Y_test = Y_test.astype(int)
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
         Acc = compute_accuracy(cyclic_accumulation_test, Y_test, centroids_q, biases_q)
-        print(Acc)
         sparsity_HDC_centroid = np.array(centroids_q).flatten() 
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
         SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])
@@ -207,4 +205,4 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         local_avgre[trial_] = Acc
         local_sparse[trial_] = SPH
         
-    return local_avg, local_avgre, local_sparse
+    return local_avg, local_avgre, local_sparsegit config pull.rebase false
