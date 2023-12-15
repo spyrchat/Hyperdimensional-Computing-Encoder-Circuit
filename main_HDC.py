@@ -78,7 +78,7 @@ NM_iter = 350 #Maximum number of iterations
 STD_EPS = 0.002 #Threshold for early-stopping on standard deviation of the Simplex
 #Contraction, expansion,... coefficients:
 alpha_simp = 1 * 0.5
-gamma_simp = 2 
+gamma_simp = 2 * 0.6
 rho_simp = 0.5
 sigma_simp = 0.5
 ################################## 

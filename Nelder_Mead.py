@@ -10,7 +10,7 @@ def evaluate_F_of_x_2(gamma, alpha_sp):
 NM_iter = 350
 STD_EPS = 0.002
 alpha_simp = 1
-gamma_simp = 2
+gamma_simp = 2 * 0.6
 rho_simp = 0.5
 sigma_simp = 0.5
 
