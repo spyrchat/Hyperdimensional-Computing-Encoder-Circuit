@@ -124,7 +124,7 @@ for optimalpoint in range(N_tradeof_points):
         #    a) thresholding and encoding of bundled dataset into final HDC "ternary" vectors (-1, 0, +1)
         #    b) Training and testing the HDC system on "Nbr_of_trials" trials (with different random dataset splits)
         #    c) Returns lambda_1*Acc + lambda_2*Sparsity, Accuracy and Sparsity for each trials
-        local_avg, local_avgre, local_sparse = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
+        local_avg, local_avgre, local_sparse = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, True, False)
         F_of_x.append(1 - np.mean(local_avg)) #Append cost F(x)  
         Accs.append(np.mean(local_avgre))
         Sparsities.append(np.mean(local_sparse))
