@@ -284,4 +284,4 @@ plt.plot(lambda_sp, ACCS)
 plt.figure(4)
 plt.plot(lambda_sp, SPARSES)
 
-
+plt.show()
