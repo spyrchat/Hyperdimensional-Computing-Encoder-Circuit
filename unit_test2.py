@@ -3,8 +3,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-def test_F_of_x():
+def test_train_HDC_RFF():
+    n_class = 2
+    N_train = 360
+    gamma = 0.0002
+    D_b = 4
+    # make some test data with one half are 1s and the other half are -1s
+    Y_train_init = np.concatenate((np.ones(N_train),np.ones(N_train)*(-1)))
+    HDC_cont_train = np.concatenate((np.ones((N_train,100)),np.ones((N_train,100))*(-1)))
+    centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, 2*N_train, Y_train_init, HDC_cont_train, gamma, D_b)
+    Acc = compute_accuracy(HDC_cont_train, Y_train_init, centroids_q, biases_q)
+    assert Acc == 1.0
+    print("Test training OK")
 
+def test_evaluate_F_of_x():
     #Parameters
     imgsize_vector = 30 #Each input vector has 30 features
     n_class = 2
@@ -39,7 +51,7 @@ def test_F_of_x():
     grayscale_table = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
     position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
     HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors
-    bias_ = np.random.randint(-2**(B_cnt-1), 2**(B_cnt-1)-1, (X.shape[0],D_HDC)) # -> INSERT YOUR CODE #generate the random biases once, [0,2*pi[ uniform
+    bias_ = np.random.randint(-2**(B_cnt-1), 2**(B_cnt-1)-1, (X.shape[0],D_HDC)) # -> INSERT YOUR CODE #generate the random biases once
 
     for i in range(X.shape[0]): # for every patient
         if i%100 == 0:
@@ -47,26 +59,27 @@ def test_F_of_x():
         HDC_cont_all[i,:] = encode_HDC_RFF(np.round((maxval - 1) * X[i,:]).astype(int), position_table, grayscale_table, D_HDC)
     
     # not quantized, test = train
-    test_F_of_x_generic(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, False, True)
+    helper_evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, False, True)
 
     # quantized, test = train
-    test_F_of_x_generic(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, True, True)
-
-    # quantized, test != train
-    test_F_of_x_generic(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, True, False)
+    helper_evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, True, True)
 
     # not quantized, test != train
-    test_F_of_x_generic(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, False, False)
+    helper_evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, False, False)
+
+    # quantized, test != train
+    helper_evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, True, False)
 
     return
 
-def test_F_of_x_generic(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, quantization, train_is_test):
+def helper_evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, quantization, train_is_test):
 
     local_avg, local_avgre, local_sparse = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, quantization, train_is_test)
 
-    print("Results of {} test; {} train and test data: ".format("quantized" if quantization else "non-quantized", "same" if train_is_test else "separate"))
+    print("Results of {} test; {} train and test data: ".format("quantized" if quantization else "non-quantized", "equal" if train_is_test else "different"))
     print("local_avg={}".format(local_avg))
     print("local_avgre={}".format(local_avgre))
     print("local_sparse={}".format(local_sparse))
 
-test_F_of_x()
+test_train_HDC_RFF()
+test_evaluate_F_of_x()
