@@ -121,7 +121,7 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         final_HDC_centroid_q = np.zeros(np.shape(HDC_cont_train[0]))
 
         for i in range(N_train):
-            final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i]*HDC_cont_train[i] #this is mu(vector) from the slides
+            final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i+1]*HDC_cont_train[i] #this is mu(vector) from the slides
         #print(final_HDC_centroid)
         # Quantization
         max_centroid = np.max(np.abs(final_HDC_centroid))
@@ -226,6 +226,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         local_sparse[trial_] = SPH
         
     return local_avg, local_avgre, local_sparse
+
 
 
 

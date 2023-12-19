@@ -31,7 +31,7 @@ maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
 D_HDC = 100 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs
-N_tradeof_points = 20 #Number of tradeoff points - use 100 
+N_tradeof_points = 100 #Number of tradeoff points - use 100 
 N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
 #Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
@@ -225,8 +225,8 @@ for optimalpoint in range(N_tradeof_points):
                         F_of_x[rep] = 1 - np.mean(F_shrink)
                         Accs[rep] = np.mean(acc_shrink)
                         Sparsities[rep] = np.mean(sparse_shrink)
-        print("Accuracy :",Accs[0])
-        print("Sparsity :",Sparsities[0])    
+        # print("Accuracy :",Accs[0])
+        # print("Sparsity :",Sparsities[0])    
     
     ################################## 
     #At the end of the Nelder-Mead search and training, save Accuracy and Sparsity of the best cost F(x) into the ACCS and SPARSES arrays
@@ -257,7 +257,6 @@ plt.plot(SPARSES_, ACCS_, 'x', markersize = 10)
 plt.grid('on')
 plt.xlabel("Sparsity")
 plt.ylabel("Accuracy")
-
 from sklearn.svm import SVR
 y = np.array(ACCS_)
 X = np.array(SPARSES_).reshape(-1, 1)
@@ -266,7 +265,7 @@ regr.fit(X, y)
 X_pred = np.linspace(np.min(SPARSES_), np.max(SPARSES_), 100).reshape(-1, 1)
 Y_pred = regr.predict(X_pred)
 plt.plot(X_pred, Y_pred, '--')
-
+plt.show()
 #Plot the evolution of the Nelder-Mead objective and the standard deviation of the simplex for the last run
 plt.figure(2)
 plt.subplot(2,1,1)
@@ -277,11 +276,10 @@ plt.subplot(2,1,2)
 plt.plot(STD_, '.-') 
 plt.title("Standard deviation") 
 plt.grid("on")
-
+plt.show()
 plt.figure(3)
 plt.plot(lambda_sp, ACCS)
-
+plt.show()
 plt.figure(4)
 plt.plot(lambda_sp, SPARSES)
-
-
+plt.show()
