@@ -86,7 +86,7 @@ def test_train():
     return Acc
 
 #Acc = test_train()
-#print("Acc =",Acc)
+#print("Acc =",Acc) #Acc should be 100%
 # If testset = trainset, we should get very high accuracy
 
 
@@ -128,7 +128,7 @@ N_train = int(X.shape[0]*portion)
 grayscale_table = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
 position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
 HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors
-bias_ = np.random.uniform(0, 2*np.pi,size=(X.shape[0],D_HDC)) # -> INSERT YOUR CODE #generate the random biases once, [0,2*pi[ uniform
+bias_ = np.random.uniform(0, 2*np.pi, size=(X.shape[0],D_HDC)) # -> INSERT YOUR CODE #generate the random biases once, [0,2*pi[ uniform
 
 for i in range(X.shape[0]): # for every patient
     if i%100 == 0:
@@ -172,7 +172,7 @@ for optimalpoint in range(N_tradeof_points):
     F_of_x = []
     Accs = []
     Sparsities = []
-    for init_simp in range(len(Simplex)):
+    for init_simp in range(len(Simplex)): #len(Simplex)=11
         simp_arr = Simplex[init_simp] #Take Simplex from list
         gamma = simp_arr[0] #Regularization hyperparameter
         alpha_sp = simp_arr[1] #Threshold of accumulators
@@ -186,4 +186,6 @@ for optimalpoint in range(N_tradeof_points):
         F_of_x.append(1 - np.mean(local_avg)) #Append cost F(x)  
         Accs.append(np.mean(local_avgre))
         Sparsities.append(np.mean(local_sparse))
+        print("Accs =",Accs[init_simp])
+        print("Sparsities =",Sparsities[init_simp])
         ##################################   

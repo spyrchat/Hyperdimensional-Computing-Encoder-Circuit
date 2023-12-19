@@ -86,10 +86,10 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
         Beta = np.zeros((N_train+1, N_train+1)) #LS-SVM regression matrix
         omega = np.zeros((N_train, N_train))
         #Fill Beta:
-        for i in range(N_train):
-            for j in range(N_train):
-                omega[i, j] = Y_train[i] * Y_train[j] * np.dot(np.transpose(HDC_cont_train[i]), HDC_cont_train[j])
-        
+        Y_train_outer = np.outer(Y_train, Y_train)  # Outer product of Y_train
+        HDC_dot_products = np.dot(HDC_cont_train, np.transpose(HDC_cont_train))  # Dot product of HDC_cont_train vectors
+        omega = Y_train_outer * HDC_dot_products  # Element-wise multiplication
+
         Beta[1:N_train+1,0] = Y_train
         Beta[0,1:N_train+1] = np.transpose(Y_train)
         Beta[1:N_train+1,1:N_train+1] = omega + pow(gamma,-1) * np.identity(N_train)
@@ -142,7 +142,7 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
 # alpha_sp is the encoding threshold
 # n_class is the number of classes, N_train is the number training points, D_b the HDC prototype quantization bit width
 # lambda_1, lambda_2 define the balance between Accuracy and Sparsity: it returns lambda_1*Acc + lambda_2*Sparsity
-def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt):
+def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, alpha_sp, n_class, N_train, D_b, lambda_1, lambda_2, B_cnt, quantization, train_is_test):
     local_avg = np.zeros(Nbr_of_trials)
     local_avgre = np.zeros(Nbr_of_trials)
     local_sparse = np.zeros(Nbr_of_trials)
@@ -158,14 +158,9 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         HDC_cont_train_cpy = HDC_cont_train_cpy*beta_ + bias_train
         cyclic_accumulation_train = HDC_cont_train_cpy % (2 ** B_cnt)
        # Ternary thresholding with threshold alpha_sp:
-        for row in range(cyclic_accumulation_train.shape[0]):
-            for col in range(cyclic_accumulation_train.shape[1]):
-                if cyclic_accumulation_train[row,col] - pow(2,B_cnt-1) > alpha_sp:
-                    cyclic_accumulation_train[row,col]  = 1
-                elif cyclic_accumulation_train[row,col] - pow(2,B_cnt-1) < -alpha_sp:
-                    cyclic_accumulation_train[row,col] = -1
-                elif abs(cyclic_accumulation_train[row,col] - pow(2,B_cnt-1)) <= alpha_sp:
-                    cyclic_accumulation_train[row,col] = 0
+        cyclic_accumulation_train[cyclic_accumulation_train - pow(2, B_cnt - 1) > alpha_sp] = 1
+        cyclic_accumulation_train[cyclic_accumulation_train - pow(2, B_cnt - 1) < -alpha_sp] = -1
+        cyclic_accumulation_train[np.abs(cyclic_accumulation_train - pow(2, B_cnt - 1)) <= alpha_sp] = 0
 
         Y_train = (LABELS[:N_train] - 1)*2-1
         Y_train = Y_train.astype(int)
@@ -174,32 +169,35 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         centroids, biases, centroids_q, biases_q = train_HDC_RFF(n_class, N_train, Y_train, cyclic_accumulation_train, gamma, D_b)
         
         # Do the same encoding steps with the test set
-        # put testset equal to training set for unit test 2, we want 100% accuracy
-        HDC_cont_test_ = HDC_cont_all[N_train:,:]
-        #HDC_cont_test_ = HDC_cont_train_*1
+        if (train_is_test == True):
+            HDC_cont_test_ = HDC_cont_train_*1
+            bias_test = bias_train*1
+            Y_test = Y_train*1
+
+        else:
+            HDC_cont_test_ = HDC_cont_all[N_train:,:]
+            bias_test = bias_[N_train:]
+            Y_test = (LABELS[N_train:] - 1)*2-1
+        
         HDC_cont_test_cpy = HDC_cont_test_ * 1
-        bias_test = bias_[N_train:]
-        #bias_test = bias_train
         # Apply cyclic accumulation with biases and accumulation speed beta_
         HDC_cont_test_cpy = HDC_cont_test_cpy*beta_ + bias_test
         cyclic_accumulation_test = HDC_cont_test_cpy % (2 ** B_cnt)
         # Ternary thresholding with threshold alpha_sp:
-        for row in range(cyclic_accumulation_test.shape[0]):
-            for col in range(cyclic_accumulation_test.shape[1]):
-                if cyclic_accumulation_test[row,col] - pow(2,B_cnt-1) > alpha_sp:
-                    cyclic_accumulation_test[row,col] = 1
-                elif cyclic_accumulation_test[row,col] - pow(2,B_cnt-1) < -alpha_sp:
-                    cyclic_accumulation_test[row,col] = -1
-                elif abs(cyclic_accumulation_test[row,col] - pow(2,B_cnt-1)) <= alpha_sp:
-                    cyclic_accumulation_test[row,col] = 0
+        cyclic_accumulation_test[cyclic_accumulation_test - pow(2, B_cnt - 1) > alpha_sp] = 1
+        cyclic_accumulation_test[cyclic_accumulation_test - pow(2, B_cnt - 1) < -alpha_sp] = -1
+        cyclic_accumulation_test[np.abs(cyclic_accumulation_test - pow(2, B_cnt - 1)) <= alpha_sp] = 0
 
-        Y_test = LABELS[N_train:] - 1
-        #Y_test = Y_train*1
         Y_test = Y_test.astype(int)
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
-        Acc = compute_accuracy(cyclic_accumulation_test, Y_test, centroids_q, biases_q)
-        sparsity_HDC_centroid = np.array(centroids_q).flatten() 
+        if (quantization == True):
+            Acc = compute_accuracy(cyclic_accumulation_test, Y_test, centroids_q, biases_q)
+            sparsity_HDC_centroid = np.array(centroids_q).flatten() 
+        else:
+            Acc = compute_accuracy(cyclic_accumulation_test, Y_test, centroids, biases)
+            sparsity_HDC_centroid = np.array(centroids).flatten() 
+
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
         SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])
         local_avg[trial_] = lambda_1 * Acc + lambda_2 * SPH #Cost F(x) is defined as 1 - this quantity
