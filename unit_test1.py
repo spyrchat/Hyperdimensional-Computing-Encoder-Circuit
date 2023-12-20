@@ -12,10 +12,10 @@ def test(N,B,dim):
     test_lookup_generate(N,B,dim,1)
 
     print("Starting tests for encode_HDC_RFF")
-    print("\t Starting tests for XOR")
+    print("\t Starting test for XOR")
     test_XOR()
     
-    print("\t Starting manual tests")
+    print("\t Starting test for encode_HDC_RFF")
     test_encode_HDC_RFF()
 
 
@@ -41,7 +41,7 @@ def test_lookup_generate(N,B,dim,mode):
     plt.ylabel("Probability")
     plt.xlabel("Row")
     plt.grid(visible=True)
-    plt.savefig("test_possibilites_mode{}.png".format(mode))
+    plt.savefig("test_probabilities_mode{}.png".format(mode))
 
 
 def test_XOR():

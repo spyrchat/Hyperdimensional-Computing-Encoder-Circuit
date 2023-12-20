@@ -70,8 +70,6 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
 # gamma: LS-SVM regularization
 # D_b: number of bit for HDC prototype quantization-2
 def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
-    # print("HDC_cont_train", HDC_cont_train)
-    # print(np.shape(HDC_cont_train))
     centroids = []
     centroids_q = []
     biases_q = []
@@ -80,6 +78,7 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
     for cla in range(n_class):
         if cla == 1:
             Y_train = Y_train*(-1)
+            
         #The steps below implement the LS-SVM training, check out the course notes, we are just implementing that
         #Beta.alpha = L -> alpha (that we want) 
         Beta = np.zeros((N_train+1, N_train+1)) #LS-SVM regression matrix
@@ -125,7 +124,7 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
             
         centroids.append(final_HDC_centroid*1)
         biases.append(alpha[0])
-        
+  
     return centroids, biases, centroids_q, biases_q
 
 

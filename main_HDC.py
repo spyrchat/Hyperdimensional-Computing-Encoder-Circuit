@@ -59,7 +59,7 @@ N_train = int(X.shape[0]*portion)
 grayscale_table = lookup_generate(D_HDC, maxval, mode = 1) #Input encoding LUT
 position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XOR-ing
 HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors
-bias_ = np.random.randint(-2**(B_cnt-1), 2**(B_cnt-1)-1, (X.shape[0],D_HDC)) #generate the random biases once
+bias_ = np.random.randint(0, 2**(B_cnt)-1, (X.shape[0],D_HDC)) #generate the random biases once
 
 for i in range(X.shape[0]):
     if i%100 == 0:
