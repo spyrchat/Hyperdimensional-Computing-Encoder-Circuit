@@ -15,13 +15,10 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
             final_HDC_centroid = (centroids[cl])
             #compute LS-SVM response
             response = np.dot(np.transpose(final_HDC_centroid),received_HDC_vector) + biases[cl]
-            #print("Responce before if: ", response)
             # if response < 0:
             #     response = -1
             # else:
             #     response = 1
-            #print("Responce after if: ", response)
-
             all_resp[cl] = response
         class_idx = np.argmax(all_resp)
         
@@ -85,8 +82,6 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
 # gamma: LS-SVM regularization
 # D_b: number of bit for HDC prototype quantization-2
 def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
-    # print("HDC_cont_train", HDC_cont_train)
-    # print(np.shape(HDC_cont_train))
     centroids = []
     centroids_q = []
     biases_q = []
@@ -224,7 +219,7 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         local_avg[trial_] = lambda_1 * Acc + lambda_2 * SPH #Cost F(x) is defined as 1 - this quantity
         local_avgre[trial_] = Acc
         local_sparse[trial_] = SPH
-        
+        print(local_avgre)
     return local_avg, local_avgre, local_sparse
 
 
