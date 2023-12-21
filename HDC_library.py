@@ -1,7 +1,5 @@
 import numpy as np
 from sklearn.utils import shuffle
-from scipy.linalg import lu_factor, lu_solve
-
 # Receives the HDC encoded test set "HDC_cont_test" and test labels "Y_test"
 # Computes test accuracy w.r.t. the HDC prototypes (centroids) and the biases found at training time
 
@@ -15,10 +13,6 @@ def compute_accuracy(HDC_cont_test, Y_test, centroids, biases):
             final_HDC_centroid = (centroids[cl])
             #compute LS-SVM response
             response = np.dot(np.transpose(final_HDC_centroid),received_HDC_vector) + biases[cl]
-            # if response < 0:
-            #     response = -1
-            # else:
-            #     response = 1
             all_resp[cl] = response
         class_idx = np.argmax(all_resp)
         
@@ -48,9 +42,7 @@ def lookup_generate(dim, n_keys, mode = 1):
             row =  np.random.choice([-1, 1], size=(dim), p=[1-probability, probability])
             table[i,:] = row
             prob_array[i] = probability
-    # print("L:", table.astype(np.int8))
-    # print("L :",np.shape(table.astype(np.int8)))
-    return table.astype(np.int8)#,prob_array
+    return table.astype(np.int8)
 
 # dim is the HDC dimensionality D
 def encode_HDC_RFF(img, position_table, grayscale_table, dim):
@@ -72,9 +64,6 @@ def encode_HDC_RFF(img, position_table, grayscale_table, dim):
         container[pixel, :] = hv*1
         
     img_hv = np.sum(container, axis = 0) #bundling without the cyclic step yet
-    # print("img_hv:",img_hv)
-    # print("Container: ", container)
-    # print("Shape of the container:",np.shape(container))
     return img_hv
 # Train the HDC circuit on the training set : (Y_train, HDC_cont_train)
 # n_class: number of classes
@@ -117,7 +106,7 @@ def train_HDC_RFF(n_class, N_train, Y_train_init, HDC_cont_train, gamma, D_b):
 
         for i in range(N_train):
             final_HDC_centroid = final_HDC_centroid + Y_train[i]*alpha[i+1]*HDC_cont_train[i] #this is mu(vector) from the slides
-        #print(final_HDC_centroid)
+
         # Quantization
         max_centroid = np.max(np.abs(final_HDC_centroid))
         final_HDC_centroid_q = np.round(final_HDC_centroid*(2**(D_b-1)-1)/max_centroid)
@@ -211,15 +200,12 @@ def evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, beta_, bias_, gamma, al
         
         # Compute accuracy and sparsity of the test set w.r.t the HDC prototypes
         Acc = compute_accuracy(HDC_cont_test_cyclic, Y_test, centroids_q, biases_q)
-        # print(Acc)
         sparsity_HDC_centroid = np.array(centroids_q).flatten() 
         nbr_zero = np.sum((sparsity_HDC_centroid == 0).astype(int))
         SPH = nbr_zero/(sparsity_HDC_centroid.shape[0])
-        # print("SPH", SPH)
         local_avg[trial_] = lambda_1 * Acc + lambda_2 * SPH #Cost F(x) is defined as 1 - this quantity
         local_avgre[trial_] = Acc
         local_sparse[trial_] = SPH
-        print(local_avgre)
     return local_avg, local_avgre, local_sparse
 
 

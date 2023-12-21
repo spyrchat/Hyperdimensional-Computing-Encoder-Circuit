@@ -28,10 +28,10 @@ n_class = 2
 D_b = 4 #We target 4-bit HDC prototypes
 B_cnt = 8
 maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
-D_HDC = 100 #HDC hypervector dimension
+D_HDC = 10 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs
-N_tradeof_points = 100 #Number of tradeoff points - use 100 
+N_tradeof_points = 10 #Number of tradeoff points - use 100 
 N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
 #Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
@@ -109,8 +109,7 @@ for optimalpoint in range(N_tradeof_points):
     else:
         print("Loading simplex")
         Simplex = np.load("Simplex2.npz", allow_pickle = True)['data']
-
-    
+ 
     #Compute the cost F(x) associated to each point in the Initial Simplex
     F_of_x = []
     Accs = []
@@ -224,9 +223,7 @@ for optimalpoint in range(N_tradeof_points):
 
                         F_of_x[rep] = 1 - np.mean(F_shrink)
                         Accs[rep] = np.mean(acc_shrink)
-                        Sparsities[rep] = np.mean(sparse_shrink)
-        # print("Accuracy :",Accs[0])
-        # print("Sparsity :",Sparsities[0])    
+                        Sparsities[rep] = np.mean(sparse_shrink)  
     
     ################################## 
     #At the end of the Nelder-Mead search and training, save Accuracy and Sparsity of the best cost F(x) into the ACCS and SPARSES arrays
