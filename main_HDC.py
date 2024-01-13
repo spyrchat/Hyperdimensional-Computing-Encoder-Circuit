@@ -1,15 +1,3 @@
-"""
-Design of a Hyperdimensional Computing Circuit for Bio-signal Classification via Nelder-Mead optimization
-and LS-SVM Training.
-
-*MAIN FILE*
-
-Computer-Aided IC Design (B-KUL-H05D7A)
-
-ir. Ali Safa, ir. Sergio Massaioli, Prof. Georges Gielen (MICAS-IMEC-KU Leuven)
-
-(Author: A. Safa)
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.utils import shuffle
@@ -21,7 +9,7 @@ plt.close('all')
 """
 ##################################   
 #Replace the path "WISCONSIN/data.csv" with wathever path you have. Note, on Windows, you must put the "r" in r'C:etc..'
-dataset_path = 'WISCONSIN/data.csv' 
+dataset_path = r'WISCONSIN/data.csv' 
 ##################################   
 imgsize_vector = 30 #Each input vector has 30 features
 n_class = 2
@@ -31,7 +19,7 @@ maxval = 256 #The input features will be mapped from 0 to 255 (8-bit)
 D_HDC = 100 #HDC hypervector dimension
 portion = 0.6 #We choose 60%-40% split between train and test sets
 Nbr_of_trials = 1 #Test accuracy averaged over Nbr_of_trials runs
-N_tradeof_points = 40 #Number of tradeoff points - use 100 
+N_tradeof_points = 100 #Number of tradeoff points - use 100 
 N_fine = int(N_tradeof_points*0.4) #Number of tradeoff points in the "fine-grain" region - use 30
 #Initialize the sparsity-accuracy hyperparameter search
 lambda_fine = np.linspace(-0.2, 0.2, N_tradeof_points-N_fine)
@@ -61,6 +49,7 @@ position_table = lookup_generate(D_HDC, imgsize_vector, mode = 0) #weight for XO
 HDC_cont_all = np.zeros((X.shape[0], D_HDC)) #Will contain all "bundled" HDC vectors
 bias_ = np.random.uniform(0, 2*np.pi,size=(X.shape[0],D_HDC)) #generate the random biases once
 
+print("grayscale size", np.shape(grayscale_table))
 for i in range(X.shape[0]):
     if i%100 == 0:
         print(str(i) + "/" + str(X.shape[0]))
@@ -108,8 +97,7 @@ for optimalpoint in range(N_tradeof_points):
     else:
         print("Loading simplex")
         Simplex = np.load("Simplex2.npz", allow_pickle = True)['data']
-
-    
+ 
     #Compute the cost F(x) associated to each point in the Initial Simplex
     F_of_x = []
     Accs = []
@@ -129,8 +117,7 @@ for optimalpoint in range(N_tradeof_points):
         Accs.append(np.mean(local_avgre))
         Sparsities.append(np.mean(local_sparse))
         ##################################   
-    print("Acc =",Accs)
-    print("Sparsity =",Sparsities)
+    
     #Transform lists to numpy array:
     F_of_x = np.array(F_of_x) 
     Accs = np.array(Accs)
@@ -142,35 +129,33 @@ for optimalpoint in range(N_tradeof_points):
     
     # For the details about the Nelder-Mead step, please refer to the course notes / reference, we are simply implementing that
     for iter_ in range(NM_iter):
-
+        # print("lambda 2", lambda_2)
         STD_.append(np.std(F_of_x))
         if np.std(F_of_x) < STD_EPS and 100 < iter_:
             break #Early-stopping criteria
         
         #1) sort Accs, Sparsities, F_of_x, Simplex, add best objective to array "objective_"
-        
-        sorted_indices = np.argsort(F_of_x) #sort cost functions from smallest to largest
+    
+        sorted_indices = np.argsort(F_of_x)
         F_of_x = F_of_x[sorted_indices]
         Accs = Accs[sorted_indices]
         Sparsities = Sparsities[sorted_indices]
         Simplex = Simplex[sorted_indices, :]
-
-        best_objective_value = F_of_x[0] #lowest cost
+     
+        best_objective_value = F_of_x[0]
         objective_.append(best_objective_value)
         
         #2) average simplex x_0 
         
         x_0 = np.mean(Simplex[:-1, :], axis=0)
-        
         #3) Reflexion x_r
-        
         x_r = x_0 + alpha_simp * (x_0 - Simplex[-1,:])
         
-        #Evaluate cost of reflected point x_r
         
+        #Evaluate cost of reflected point x_r
         F_curr, acc_curr, sparse_curr = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_r[2], bias_, x_r[0], x_r[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
         F_curr = 1 - np.mean(F_curr)
-        if F_curr >= best_objective_value and F_curr < F_of_x[-2]:
+        if F_of_x[0] <= F_curr < F_of_x[-2]:
             F_of_x[-1] = F_curr
             Simplex[-1,:] = x_r
             Accs[-1] = acc_curr
@@ -180,7 +165,7 @@ for optimalpoint in range(N_tradeof_points):
             rest = True
             
         if rest == True:
-        #4) Expansion x_e
+            #4) Expansion x_e
             if F_curr < best_objective_value:
                 x_e = x_0 + gamma_simp*(x_r - x_0)
                 F_exp, acc_exp, sparse_exp = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_e[2], bias_, x_e[0], x_e[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
@@ -198,36 +183,35 @@ for optimalpoint in range(N_tradeof_points):
                     Sparsities[-1] = sparse_curr
        
             else:
-                #5) Contraction x_c
+                #4) Contraction x_c
                 flag = False
                 if F_curr < F_of_x[-1]:
                     x_c = x_0 + rho_simp * (x_r - x_0)
                     F_c, acc_c, sparse_c = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_c[2], bias_, x_c[0], x_c[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
                     if F_c < F_curr:
                         flag = True
-                else:
+                elif F_curr >= F_of_x[-1]:
                     x_c = x_0 + rho_simp * (F_of_x[-1] - x_0)
                     F_c, acc_c, sparse_c = evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, x_c[2], bias_, x_c[0], x_c[1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
                     if F_c < F_of_x[-1]:
                         flag = True
-                 
-                #Evaluate cost of contracted point x_e
                 
+                #Evaluate cost of contracted point x_e
+                                
                 if flag:
-                    F_of_x[-1] = F_c #replace worst point with contracted point
+                    F_of_x[-1] = F_c
                     Simplex[-1,:] = x_c
                     Accs[-1] = acc_c
                     Sparsities[-1] = sparse_c
                 else:
-                    #6) Shrinking
+                    #4) Shrinking
                     for rep in range(1, Simplex.shape[0]):
-                        #Replace all points except the best (Simplex[0])
-                        Simplex[rep,:] = Simplex[0,:] + sigma_simp * (Simplex[rep,:] - Simplex[0,:])
+                        Simplex[rep,:] = Simplex[1,:] + sigma_simp * (Simplex[rep,:] - Simplex[1,:])
                         F_shrink, acc_shrink, sparse_shrink =  evaluate_F_of_x(Nbr_of_trials, HDC_cont_all, LABELS, Simplex[rep,2], bias_, Simplex[rep,0], Simplex[rep,1], n_class, N_train, D_b, lambda_1, lambda_2, B_cnt)
+
                         F_of_x[rep] = 1 - np.mean(F_shrink)
                         Accs[rep] = np.mean(acc_shrink)
-                        Sparsities[rep] = np.mean(sparse_shrink)
-        
+                        Sparsities[rep] = np.mean(sparse_shrink)  
     
     ################################## 
     #At the end of the Nelder-Mead search and training, save Accuracy and Sparsity of the best cost F(x) into the ACCS and SPARSES arrays
@@ -258,7 +242,6 @@ plt.plot(SPARSES_, ACCS_, 'x', markersize = 10)
 plt.grid('on')
 plt.xlabel("Sparsity")
 plt.ylabel("Accuracy")
-
 from sklearn.svm import SVR
 y = np.array(ACCS_)
 X = np.array(SPARSES_).reshape(-1, 1)
@@ -267,7 +250,7 @@ regr.fit(X, y)
 X_pred = np.linspace(np.min(SPARSES_), np.max(SPARSES_), 100).reshape(-1, 1)
 Y_pred = regr.predict(X_pred)
 plt.plot(X_pred, Y_pred, '--')
-
+plt.show()
 #Plot the evolution of the Nelder-Mead objective and the standard deviation of the simplex for the last run
 plt.figure(2)
 plt.subplot(2,1,1)
@@ -278,11 +261,10 @@ plt.subplot(2,1,2)
 plt.plot(STD_, '.-') 
 plt.title("Standard deviation") 
 plt.grid("on")
-
+plt.show()
 plt.figure(3)
 plt.plot(lambda_sp, ACCS)
-
+plt.show()
 plt.figure(4)
 plt.plot(lambda_sp, SPARSES)
-
-
+plt.show()
